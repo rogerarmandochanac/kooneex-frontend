@@ -105,12 +105,6 @@ class AuthService {
     return {'mensaje': 'none'};
   }
 
-  @override
-  void dispose() {
-    _socketService.desconectar(); // Cerramos el socket al salir 
-    super.dispose();
-  }
-
 Future<bool> crearViaje(Map<String, dynamic> datos) async {
   try {
     final prefs = await SharedPreferences.getInstance();
@@ -147,7 +141,7 @@ Future<List<dynamic>> obtenerOfertas() async {
     if (viajeId == null) return [];
 
     final response = await http.get(
-      Uri.parse('$_baseUrl/ofertas/'),
+      Uri.parse('$_baseUrl/ofertas/?viaje_id=$viajeId'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -155,11 +149,7 @@ Future<List<dynamic>> obtenerOfertas() async {
     );
 
     if (response.statusCode == 200) {
-      List<dynamic> todasLasOfertas = jsonDecode(response.body);
-      
-      // Filtramos las ofertas para que solo se vean las de este viaje
-      // Tal como hacías en tarifa.py: o["viaje"] == self.viaje_id
-      return todasLasOfertas.where((o) => o['viaje'] == viajeId).toList();
+      return jsonDecode(response.body);
     } else {
       print("Error al obtener ofertas: ${response.statusCode}");
       return [];
@@ -216,5 +206,75 @@ Future<bool> eliminarViaje() async {
     return false;
   }
 }
+
+Future<List<dynamic>> obtenerViajesDisponibles() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token');
+  final response = await http.get(
+    Uri.parse('$_baseUrl/viajes/'), // Django filtrará los "pendientes"
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+  );
+  return response.statusCode == 200 ? jsonDecode(response.body) : [];
+}
+
+Future<bool> enviarOferta(int viajeId, String monto) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token');
+  final response = await http.post(
+    Uri.parse('$_baseUrl/ofertas/'),
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({
+      "viaje": viajeId,
+      "monto": double.parse(monto),
+      "tiempo_estimado": 30, // Valor fijo como tenías en Python
+    }),
+  );
+  return response.statusCode == 201;
+}
+
+Future<bool> actualizarUbicacion(double lat, double lng) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token');
+  try {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/usuarios/actualizar_ubicacion/'), // Ajusta a tu endpoint de perfil
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        "lat": lat,
+        "lon": lng,
+      }),
+    );
+    return response.statusCode == 200;
+  } catch (e) {
+    return false;
+  }
+}
+
+// lib/services/auth_service.dart
+Future<bool> cancelarOfertaPropia() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token');
+  final viajeId = prefs.getInt('current_viaje_id'); // Usamos el ID del viaje actual
+
+  final response = await http.delete(
+    Uri.parse('$_baseUrl/ofertas/$viajeId/rechazar/'), // Tu endpoint de Django
+     headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+  );
+  return response.statusCode == 200;
+}
+
+
 
 }

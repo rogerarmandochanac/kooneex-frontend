@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:kooneex_app/screens/esperando_confirmacion.dart';
 import 'screens/login_screen.dart';
 import 'screens/viaje_screen.dart'; // La crearemos ahora
 import 'screens/solicitudes_screen.dart'; // La crearemos ahora
@@ -46,6 +47,7 @@ class KooneexApp extends StatelessWidget {
         '/viaje': (context) => const ViajeScreen(), // Pantalla Pasajero
         '/solicitudes': (context) => const SolicitudesScreen(), // Pantalla Mototaxista
         '/ofertas': (context) => const OfertasScreen(), // Antes era /tarifas
+        '/esperando_confirmacion': (context) => const EsperandoConfirmacionScreen(), // Antes era /tarifas
       },
     );
   }

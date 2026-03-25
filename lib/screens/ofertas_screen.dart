@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/viaje_socket_service.dart'; // El servicio creado arriba
+import 'package:shared_preferences/shared_preferences.dart';
 
 class OfertasScreen extends StatefulWidget {
   const OfertasScreen({super.key});
@@ -116,7 +117,7 @@ class _OfertasScreenState extends State<OfertasScreen> {
             ListTile(
               leading: CircleAvatar(
                 radius: 30,
-                backgroundImage: NetworkImage(oferta['foto'] ?? 'https://via.placeholder.com/150'),
+                backgroundImage: NetworkImage(oferta['mototaxista_foto'] ?? 'https://via.placeholder.com/150'),
               ),
               title: Text("Mototaxista: ${oferta['nombre']}", 
                   style: const TextStyle(fontWeight: FontWeight.bold)), // [cite: 30]
@@ -140,8 +141,21 @@ class _OfertasScreenState extends State<OfertasScreen> {
     );
   }
 
-  void _aceptarOferta(int id) {
-    // Lógica para enviar el PATCH a /ofertas/{id}/aceptar/ 
+  void _aceptarOferta(int ofertaId) async{
+    setState(() => _estaCargando = true);
+
+    final exito = await _authService.aceptarOferta(ofertaId);
+
+    if (exito) {
+      // Si el backend responde 200, vamos a la pantalla del viaje activo
+      Navigator.pushReplacementNamed(context, '/viaje_en_curso');
+    } else {
+      setState(() => _estaCargando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error al aceptar la oferta. Inténtalo de nuevo.")),
+      );
+    }
+
   }
 
   void _cancelarViaje() {

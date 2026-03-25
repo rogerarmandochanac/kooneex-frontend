@@ -14,7 +14,7 @@ dependencies:
   # Para guardar el token de sesión (como hacías en token.txt) 
   shared_preferences: ^2.2.2
   # Para el GPS y la Cámara que mencionaste [cite: 1]
-  geolocator: ^10.1.0
+  geolocator: ^12.0.0
   camera: ^0.10.5
   path_provider: ^2.1.1
   # Para los WebSockets de tu backend 

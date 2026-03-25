@@ -50,7 +50,11 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.pushReplacementNamed(context, '/viaje_aceptado_moto');
         } else if (estadoViaje['mensaje'] == "tiene_viaje_en_curso") {
           Navigator.pushReplacementNamed(context, '/viaje_en_curso_moto');
-        } else {
+        } else if(estadoViaje['mensaje'] == "tiene_viaje_ofertado"){
+          Navigator.pushReplacementNamed(context, '/esperando_confirmacion');
+        }
+        
+        else {
           Navigator.pushReplacementNamed(context, '/solicitudes');
         }
       }
