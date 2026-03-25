@@ -1,0 +1,220 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class AuthService {
+  // Cambia esta URL por la de tu servidor Django
+  final String _baseUrl = "http://192.168.1.105:8000/api"; 
+
+  Future<Map<String, dynamic>> login(String username, String password) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/token/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', data['access']);
+        return {'success': true, 'token': data['access']};
+      } else {
+        return {'success': false, 'message': 'Credenciales incorrectas'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error de conexión: $e'};
+    }
+  }
+
+  // ESTA ES LA FUNCIÓN QUE FALTA O ESTÁ MAL DEFINIDA
+  Future<Map<String, dynamic>> register({
+    required String username,
+    required String password,
+    required String email,
+    required String firstName,
+    required String lastName,
+    required String telefono,
+    required String rol,
+    required File foto, // Importante para tu lógica de registro.py 
+  }) async {
+    try {
+      // Usamos MultipartRequest para enviar la imagen igual que en tu código Kivy 
+      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/usuarios/registro/'));
+      
+      request.fields.addAll({
+        'username': username,
+        'password': password,
+        'email': email,
+        'first_name': firstName,
+        'last_name': lastName,
+        'telefono': telefono,
+        'rol': rol,
+      });
+
+      // Adjuntamos la foto tomada desde la cámara
+      request.files.add(await http.MultipartFile.fromPath('foto', foto.path));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return {'success': true};
+      } else {
+        final errorData = jsonDecode(response.body);
+        return {'success': false, 'message': errorData['error'] ?? 'Error al crear usuario'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error de conexión: $e'};
+    }
+  }
+
+  Future<String?> getUsuarioRol(String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/usuario/'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['rol'];
+      }
+    } catch (e) {
+      print("Error obteniendo rol: $e");
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>> verificarEstadoViaje() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/viajes/verificar_viajes_activos/'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      }
+    } catch (e) {
+      print("Error verificando viaje: $e");
+    }
+    return {'mensaje': 'none'};
+  }
+
+  @override
+  void dispose() {
+    _socketService.desconectar(); // Cerramos el socket al salir 
+    super.dispose();
+  }
+
+Future<bool> crearViaje(Map<String, dynamic> datos) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    final response = await http.post(
+      Uri.parse('$_baseUrl/viajes/'), 
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(datos),
+    );
+
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      // Guardamos el ID del viaje recién creado para seguimiento
+      await prefs.setInt('current_viaje_id', data['id']);
+      return true;
+    }
+    return false;
+  } catch (e) {
+    print("Error en crearViaje: $e");
+    return false;
+  }
+}
+
+Future<List<dynamic>> obtenerOfertas() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final viajeId = prefs.getInt('current_viaje_id'); // El ID que guardamos al crear el viaje
+
+    if (viajeId == null) return [];
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/ofertas/'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> todasLasOfertas = jsonDecode(response.body);
+      
+      // Filtramos las ofertas para que solo se vean las de este viaje
+      // Tal como hacías en tarifa.py: o["viaje"] == self.viaje_id
+      return todasLasOfertas.where((o) => o['viaje'] == viajeId).toList();
+    } else {
+      print("Error al obtener ofertas: ${response.statusCode}");
+      return [];
+    }
+  } catch (e) {
+    print("Error de conexión en obtenerOfertas: $e");
+    return [];
+  }
+}
+
+Future<bool> aceptarOferta(int ofertaId) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    final response = await http.patch(
+      Uri.parse('$_baseUrl/ofertas/$ofertaId/aceptar/'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    return response.statusCode == 200;
+  } catch (e) {
+    print("Error al aceptar oferta: $e");
+    return false;
+  }
+}
+
+Future<bool> eliminarViaje() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final viajeId = prefs.getInt('current_viaje_id');
+
+    if (viajeId == null) return false;
+
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/viajes/$viajeId/eliminar/'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      await prefs.remove('current_viaje_id'); // Limpiamos el ID local
+      return true;
+    }
+    return false;
+  } catch (e) {
+    print("Error al eliminar viaje: $e");
+    return false;
+  }
+}
+
+}

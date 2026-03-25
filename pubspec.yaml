@@ -1,0 +1,46 @@
+name: kooneex_app
+description: "Proyecto Kooneex - Migración de Kivy a Flutter"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Para las peticiones a Django 
+  http: ^1.1.0
+  # Para guardar el token de sesión (como hacías en token.txt) 
+  shared_preferences: ^2.2.2
+  # Para el GPS y la Cámara que mencionaste [cite: 1]
+  geolocator: ^10.1.0
+  camera: ^0.10.5
+  path_provider: ^2.1.1
+  # Para los WebSockets de tu backend 
+  web_socket_channel: ^2.4.0
+  image_picker: ^1.0.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Registro de Imágenes 
+  assets:
+    - assets/logo_blanco.png
+    - assets/kooneex_logo.png
+    - assets/logo_naranja.png
+    - assets/moto_koonex.png
+
+  # Registro de Fuentes (Equivalente a LabelBase.register en Kivy) 
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: fonts/Poppins-Medium.ttf
+    - family: Inter
+      fonts:
+        - asset: fonts/Inter-Regular.ttf
