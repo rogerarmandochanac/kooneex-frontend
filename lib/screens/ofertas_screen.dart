@@ -148,7 +148,7 @@ class _OfertasScreenState extends State<OfertasScreen> {
 
     if (exito) {
       // Si el backend responde 200, vamos a la pantalla del viaje activo
-      Navigator.pushReplacementNamed(context, '/viaje_en_curso');
+      Navigator.pushReplacementNamed(context, '/espera_viaje');
     } else {
       setState(() => _estaCargando = false);
       ScaffoldMessenger.of(context).showSnackBar(

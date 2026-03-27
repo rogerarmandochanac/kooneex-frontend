@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../screens/register_screen.dart';
+import '../services/location_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -8,6 +9,7 @@ class LoginScreen extends StatefulWidget {
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
+
 
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
@@ -28,7 +30,11 @@ class _LoginScreenState extends State<LoginScreen> {
       // 1. Obtenemos el rol del usuario (igual que en login.py)
       String? rol = await _authService.getUsuarioRol(result['token']);
 
-      
+      // 2. Iniciar rastreo (Usando el Singleton)
+      // Nota: No usamos 'await' aquí para que no se congele la pantalla
+      LocationService().iniciarRastreo().catchError((e) {
+        debugPrint("Error al activar GPS: $e");
+      });
       
       // 2. Verificamos el estado del viaje en el backend
       final estadoViaje = await _authService.verificarEstadoViaje();
@@ -38,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // 3. Lógica de redirección basada en tu código Kivy 
       if (rol == "pasajero") {
         if (estadoViaje['mensaje'] == "tiene_viaje_activo") {
-          Navigator.pushReplacementNamed(context, '/viaje_en_curso');
+          Navigator.pushReplacementNamed(context, '/espera_viaje');
         } else if (estadoViaje['mensaje'] == "tiene_viaje_pendiente") {
           Navigator.pushReplacementNamed(context, '/ofertas');
         } else {
@@ -47,9 +53,9 @@ class _LoginScreenState extends State<LoginScreen> {
       } 
       else if (rol == "mototaxista") {
         if (estadoViaje['mensaje'] == "tiene_viaje_aceptado") {
-          Navigator.pushReplacementNamed(context, '/viaje_aceptado_moto');
+          Navigator.pushReplacementNamed(context, '/aceptar_viaje');
         } else if (estadoViaje['mensaje'] == "tiene_viaje_en_curso") {
-          Navigator.pushReplacementNamed(context, '/viaje_en_curso_moto');
+          Navigator.pushReplacementNamed(context, '/viaje_en_curso');
         } else if(estadoViaje['mensaje'] == "tiene_viaje_ofertado"){
           Navigator.pushReplacementNamed(context, '/esperando_confirmacion');
         }
@@ -175,4 +181,5 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
 }

@@ -276,5 +276,55 @@ Future<bool> cancelarOfertaPropia() async {
 }
 
 
+// lib/services/auth_service.dart
+
+Future<bool> cambiarEstadoViaje(int viaje) async {
+  final prefs = await SharedPreferences.getInstance();
+  final viajeId = prefs.getInt('current_viaje_id');
+  final token = prefs.getString('access_token');
+
+  final response = await http.patch(
+    Uri.parse('$_baseUrl/viajes/$viaje/en_curso/'), // Endpoint: .../viajes/ID/en_curso/ 
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    body: jsonEncode({"estado": "en_curso"}),
+  );
+  
+  return response.statusCode == 200 || response.statusCode == 202;
+}
+
+Future<Map<String, dynamic>?> obtenerViajeActual() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    final response = await http.get(
+      Uri.parse('$_baseUrl/viajes/'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> viajes = jsonDecode(response.body);
+      
+      // Filtramos el viaje activo (aceptado o en_curso)
+      final viajeActivo = viajes.firstWhere(
+        (v) => v["estado"] == "aceptado" || v["estado"] == "en_curso",
+        orElse: () => null,
+      );
+
+      return viajeActivo;
+    }
+    return null;
+  } catch (e) {
+    print("Error en obtenerViajeActual: $e");
+    return null;
+  }
+}
+
 
 }

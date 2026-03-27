@@ -6,6 +6,10 @@ import 'screens/viaje_screen.dart'; // La crearemos ahora
 import 'screens/solicitudes_screen.dart'; // La crearemos ahora
 import 'screens/register_screen.dart'; // La crearemos ahora
 import 'screens/ofertas_screen.dart'; // La crearemos ahora
+import 'screens/espera_viaje_screen.dart'; // La crearemos ahora
+import 'screens/aceptar_viaje_screen.dart'; // La crearemos ahora
+import 'screens/viaje_en_curso_screen.dart'; // La crearemos ahora
+import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 
 void main() async {
   // Asegura que los servicios de Flutter estén listos antes de ejecutar la app
@@ -15,6 +19,9 @@ void main() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
   ]);
+
+  await FMTCObjectBoxBackend().initialise();
+  await const FMTCStore('mapStore').manage.create();
 
   runApp(const KooneexApp());
 }
@@ -48,6 +55,9 @@ class KooneexApp extends StatelessWidget {
         '/solicitudes': (context) => const SolicitudesScreen(), // Pantalla Mototaxista
         '/ofertas': (context) => const OfertasScreen(), // Antes era /tarifas
         '/esperando_confirmacion': (context) => const EsperandoConfirmacionScreen(), // Antes era /tarifas
+        '/espera_viaje': (context) => const EsperaViajeScreen(),
+        '/aceptar_viaje': (context) => const AceptarViajeScreen(),
+        '/viaje_en_curso': (context) => const ViajeEnCursoScreen(),
       },
     );
   }

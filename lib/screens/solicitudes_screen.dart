@@ -120,7 +120,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
     final exito = await _authService.enviarOferta(viajeId, monto);
     if (exito) {
       // Si la oferta se envía, el mototaxista pasa a esperar respuesta
-      Navigator.pushNamed(context, '/espera_respuesta');
+      Navigator.pushNamed(context, '/esperando_confirmacion');
     }
   }
 
@@ -146,6 +146,7 @@ void _iniciarRastreoUbicacion() async {
   // Geolocator.getPositionStream(
   //   locationSettings: const LocationSettings(
   //     accuracy: LocationAccuracy.high,
+  
   //     distanceFilter: 50, // Se actualiza cada 50 metros
   //   ),
   // ).listen((Position position) {

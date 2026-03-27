@@ -102,7 +102,7 @@ class _ViajeScreenState extends State<ViajeScreen> {
 
     if (exito) {
       // Si el viaje se crea, vas a la pantalla de tarifas (como en tu Kivy)
-      Navigator.pushReplacementNamed(context, '/tarifas');
+      Navigator.pushReplacementNamed(context, '/ofertas');
     }
   }
 
