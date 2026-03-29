@@ -21,9 +21,17 @@ class _ViajeScreenState extends State<ViajeScreen> {
   final _referenciaController = TextEditingController();
 
   final Map<String, List<double>> _destinosPredefinidos = {
-    "Plaza Principal": [18.1234, -92.5678],
-    "Hospital General": [18.1250, -92.5700],
-    "Terminal de Autobuses": [18.1210, -92.5600],
+    "Pomuch Centro": [20.13730, -90.17490],
+    "Pomuch Soledad": [20.145780, -90.173459],
+    "Pomuch Nueva": [20.144052896584597, -90.17682172260673],
+    "Pomuch San Francisco": [20.146953764112478, -90.16952611440409],
+    "Pomuch Villa Lucrecia": [20.14155488415286, -90.16592122564514],
+    "Pomuch San Diego": [20.141151975180843, -90.17287351110882],
+    "Pomuch Santa Cristina": [20.135914063988263, -90.16540624153673],
+    "Pomuch San pedro I": [20.13285181919244, -90.17321683384776],
+    "Pomuch San pedro II": [20.12680773892196, -90.17690755329146],
+    "Pomuch Benito Juarez": [20.12962833879734, -90.1786241669862],
+    "Pomuch Hacienda Dzodzil": [20.16802372650526, -90.23085213931239],
   };
 
   @override
@@ -79,35 +87,64 @@ class _ViajeScreenState extends State<ViajeScreen> {
   void _abrirSeleccionDestino() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // Permite que el modal crezca si hay muchos items
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10))),
-              const SizedBox(height: 20),
-              const Text("Destinos Frecuentes", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              ..._destinosPredefinidos.keys.map((nombre) {
-                return ListTile(
-                  leading: const Icon(Icons.location_on, color: Color(0xFFF7931E)),
-                  title: Text(nombre, style: const TextStyle(fontWeight: FontWeight.w500)),
-                  onTap: () {
-                    setState(() {
-                      _destinoNombre = nombre;
-                      _destinoLat = _destinosPredefinidos[nombre]![0];
-                      _destinoLon = _destinosPredefinidos[nombre]![1];
-                    });
-                    Navigator.pop(context);
-                  },
-                );
-              }),
-            ],
-          ),
+        // DraggableScrollableSheet hace que el modal sea deslizable y use bien el espacio
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6, // Empieza al 60% de la pantalla
+          minChildSize: 0.4,     // Mínimo 40%
+          maxChildSize: 0.9,     // Máximo 90%
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  // Indicador de arrastre (la rayita gris)
+                  Container(
+                    width: 40, 
+                    height: 4, 
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300], 
+                      borderRadius: BorderRadius.circular(10)
+                    )
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Destinos Disponibles", 
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                  ),
+                  const SizedBox(height: 10),
+                  
+                  // Cambiamos el Column por un ListView con scrollController
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      itemCount: _destinosPredefinidos.length,
+                      itemBuilder: (context, index) {
+                        String nombre = _destinosPredefinidos.keys.elementAt(index);
+                        return ListTile(
+                          leading: const Icon(Icons.location_on, color: Color(0xFFF7931E)),
+                          title: Text(nombre, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          onTap: () {
+                            setState(() {
+                              _destinoNombre = nombre;
+                              _destinoLat = _destinosPredefinidos[nombre]![0];
+                              _destinoLon = _destinosPredefinidos[nombre]![1];
+                            });
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
