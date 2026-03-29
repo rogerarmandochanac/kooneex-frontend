@@ -177,7 +177,7 @@ class _OfertasScreenState extends State<OfertasScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        oferta['nombre'] ?? "Conductor",
+                        oferta['mototaxista_nombre'] ?? "Conductor",
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
                       ),
                       Row(

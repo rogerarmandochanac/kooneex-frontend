@@ -18,6 +18,7 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('current_viaje_id');
         await prefs.setString('access_token', data['access']);
         return {'success': true, 'token': data['access']};
       } else {
@@ -223,6 +224,8 @@ Future<List<dynamic>> obtenerViajesDisponibles() async {
 Future<bool> enviarOferta(int viajeId, String monto) async {
   final prefs = await SharedPreferences.getInstance();
   final token = prefs.getString('access_token');
+  await prefs.setInt('current_viaje_id', viajeId);
+  
   final response = await http.post(
     Uri.parse('$_baseUrl/ofertas/'),
     headers: {
@@ -262,11 +265,11 @@ Future<bool> actualizarUbicacion(double lat, double lng) async {
 // lib/services/auth_service.dart
 Future<bool> cancelarOfertaPropia() async {
   final prefs = await SharedPreferences.getInstance();
-  final token = prefs.getString('access_token');
-  final viajeId = prefs.getInt('current_viaje_id'); // Usamos el ID del viaje actual
-
+  final token = prefs.getString('access_token');// Usamos el ID del viaje actual
+  final viajeId = prefs.getInt('current_viaje_id');
+  
   final response = await http.delete(
-    Uri.parse('$_baseUrl/ofertas/$viajeId/rechazar/'), // Tu endpoint de Django
+    Uri.parse('$_baseUrl/ofertas/${viajeId}/rechazar/'), // Tu endpoint de Django
      headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
@@ -326,5 +329,9 @@ Future<Map<String, dynamic>?> obtenerViajeActual() async {
   }
 }
 
+Future<void> logout() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.clear(); // Borra todo: token, viajeId, etc.
+}
 
 }

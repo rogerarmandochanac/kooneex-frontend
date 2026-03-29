@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../screens/register_screen.dart';
 import '../services/location_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,9 +39,17 @@ class _LoginScreenState extends State<LoginScreen> {
       
       // 2. Verificamos el estado del viaje en el backend
       final estadoViaje = await _authService.verificarEstadoViaje();
+      final prefs = await SharedPreferences.getInstance();
       
       Navigator.pop(context); // Quitamos el spinner
-
+      // 🔥 GUARDAR EL ID DEL VIAJE SI EXISTE
+      // Asumiendo que el backend lo envía como estadoViaje['viaje_id']
+      if (estadoViaje['viaje_id'] != null) {
+        await prefs.setInt('current_viaje_id', estadoViaje['viaje_id']); //
+      } else {
+        // Si no hay viaje activo, es vital limpiar cualquier ID viejo
+        await prefs.remove('current_viaje_id'); //
+      }
       // 3. Lógica de redirección basada en tu código Kivy 
       if (rol == "pasajero") {
         if (estadoViaje['mensaje'] == "tiene_viaje_activo") {
