@@ -233,22 +233,36 @@ class _OfertasScreenState extends State<OfertasScreen> {
     );
   }
 
-  void _confirmarCancelacion() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("¿Cancelar búsqueda?"),
-        content: const Text("Tu solicitud de viaje será eliminada."),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("MANTENER")),
-          TextButton(onPressed: () {
+void _confirmarCancelacion() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text("¿Cancelar búsqueda?", 
+        style: TextStyle(fontWeight: FontWeight.bold)),
+      content: const Text("Si cancelas, los mototaxistas ya no podrán ver tu solicitud."),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context), 
+          child: const Text("MANTENER", style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          onPressed: () {
             Navigator.pop(context);
-            _cancelarViaje();
-          }, child: const Text("CANCELAR VIAJE", style: TextStyle(color: Colors.red))),
-        ],
-      ),
-    );
-  }
+            _cancelarViaje(); // Ejecuta la lógica con el servicio
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red[50],
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text("SÍ, CANCELAR", 
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
+}
 
   void _aceptarOferta(int ofertaId) async {
     setState(() => _estaCargando = true);
@@ -265,8 +279,38 @@ class _OfertasScreenState extends State<OfertasScreen> {
     }
   }
 
-  void _cancelarViaje() async {
-    // Aquí implementas tu lógica de borrado y vuelves a la pantalla anterior
-    Navigator.pushReplacementNamed(context, '/viaje');
+ void _cancelarViaje() async {
+  // 1. Mostramos el cargando para que el usuario sepa que algo pasa
+  setState(() => _estaCargando = true);
+
+  // 2. Llamamos a tu función del servicio
+  final exito = await _authService.eliminarViaje();
+
+  if (exito) {
+    if (mounted) {
+      // 3. Limpiamos cualquier recurso del socket antes de irnos
+      _socketService.desconectar(); 
+      
+      // 4. Volvemos a la pantalla de solicitud de viaje
+      Navigator.pushReplacementNamed(context, '/viaje');
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Solicitud cancelada correctamente"),
+          backgroundColor: Colors.black87,
+        ),
+      );
+    }
+  } else {
+    if (mounted) {
+      setState(() => _estaCargando = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No se pudo cancelar el viaje. Intenta de nuevo."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
   }
+}
 }
