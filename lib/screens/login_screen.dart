@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
       // 3. Lógica de redirección basada en tu código Kivy 
       if (rol == "pasajero") {
         if (estadoViaje['mensaje'] == "tiene_viaje_activo") {
-          Navigator.pushReplacementNamed(context, '/espera_viaje');
+          Navigator.pushReplacementNamed(context, '/viaje_en_curso_pasajero');
         } else if (estadoViaje['mensaje'] == "tiene_viaje_pendiente") {
           Navigator.pushReplacementNamed(context, '/ofertas');
         } else {

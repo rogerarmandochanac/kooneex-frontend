@@ -9,6 +9,7 @@ import 'screens/ofertas_screen.dart'; // La crearemos ahora
 import 'screens/espera_viaje_screen.dart'; // La crearemos ahora
 import 'screens/aceptar_viaje_screen.dart'; // La crearemos ahora
 import 'screens/viaje_en_curso_screen.dart'; // La crearemos ahora
+import 'screens/viaje_en_curso_pasajero_screen.dart'; // La crearemos ahora
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 
 void main() async {
@@ -58,6 +59,7 @@ class KooneexApp extends StatelessWidget {
         '/espera_viaje': (context) => const EsperaViajeScreen(),
         '/aceptar_viaje': (context) => const AceptarViajeScreen(),
         '/viaje_en_curso': (context) => const ViajeEnCursoScreen(),
+        '/viaje_en_curso_pasajero': (context) => const ViajeEnCursoPasajeroScreen(),
       },
     );
   }

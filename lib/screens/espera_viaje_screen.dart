@@ -41,7 +41,7 @@ class _EsperaViajeScreenState extends State<EsperaViajeScreen> with SingleTicker
         final data = jsonDecode(mensaje);
         
         if (data['type'] == 'viaje_en_curso') {
-          if(mounted) Navigator.pushReplacementNamed(context, '/viaje_en_curso');
+          if(mounted) Navigator.pushReplacementNamed(context, '/viaje_en_curso_pasajero');
         }
 
         if (data['type'] == 'viaje_cancelado') {
