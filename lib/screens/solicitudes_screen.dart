@@ -22,13 +22,14 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
   void initState() {
     super.initState();
     _iniciarRastreoUbicacion();
-    _iniciarEscucha();
+    _escucharSolicitudes();
     _cargarViajes();
   }
 
-  void _iniciarEscucha() {
+  void _escucharSolicitudes() {
     _socketService.conectar().listen((mensaje) {
       final data = jsonDecode(mensaje);
+      //Si se escucha un nuevo viaje o se cancela el viaje carga el listado de viajes
       if (data['type'] == 'nuevo_viaje' || data['type'] == 'cancelar_viaje') {
         _cargarViajes();
       }
@@ -232,7 +233,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
       if (mounted) Navigator.pushNamed(context, '/esperando_confirmacion');
     } else {
       if (mounted) {
-        final prefs = await await SharedPreferences.getInstance();
+        final prefs = await SharedPreferences.getInstance();
         await prefs.setInt('current_viaje_id', viajeId);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Error al enviar oferta. Intenta de nuevo.")),

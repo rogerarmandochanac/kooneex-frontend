@@ -12,7 +12,7 @@ class OfertasScreen extends StatefulWidget {
 }
 
 class _OfertasScreenState extends State<OfertasScreen> {
-  final _socketService = ViajeSocketService();
+  final _socketService = ViajeSocketService(); // Viaje Socket Service
   final _authService = AuthService();
   List<dynamic> _ofertas = [];
   bool _estaCargando = true;
@@ -31,6 +31,7 @@ class _OfertasScreenState extends State<OfertasScreen> {
 
       _socketService.conectar(viajeId).listen((mensaje) {
         final data = jsonDecode(mensaje);
+        //Si es escucha una nueva oferta o se cancela la oferta vuelve a cargar los viajes
         if (data['type'] == 'nueva_oferta' || data['type'] == 'oferta_cancelada') {
           _cargarOfertasIniciales();
         }

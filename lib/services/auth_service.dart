@@ -203,7 +203,6 @@ Future<bool> eliminarViaje() async {
     }
     return false;
   } catch (e) {
-    print("Error al eliminar viaje: $e");
     return false;
   }
 }

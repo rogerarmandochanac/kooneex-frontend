@@ -9,7 +9,6 @@ class ViajeSocketService {
 
   Stream<dynamic> conectar(int viajeId) {
     final url = "$_wsBaseUrl/$viajeId/";
-    print("🔌 Conectando a WS: $url");
     
     _channel = WebSocketChannel.connect(Uri.parse(url));
     return _channel!.stream;
@@ -17,6 +16,5 @@ class ViajeSocketService {
 
   void desconectar() {
     _channel?.sink.close();
-    print("🔌 WS desconectado manualmente");
   }
 }

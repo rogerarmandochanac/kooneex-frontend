@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/viaje_socket_service.dart';
+import '../services/mototaxi_socket_service.dart';
 import '../services/auth_service.dart';
 
 class EsperandoConfirmacionScreen extends StatefulWidget {
@@ -12,19 +13,19 @@ class EsperandoConfirmacionScreen extends StatefulWidget {
 }
 
 class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScreen> with SingleTickerProviderStateMixin {
-  final _socketService = ViajeSocketService();
+  final _viajeSocket = ViajeSocketService();
+  final _motoSocket = MototaxiSocketService();
   final _authService = AuthService();
-  bool _cancelando = false;
   
-  // Controlador para la animación de radar
+  bool _cancelando = false;
+  int? _viajeId; // Variable local para evitar leer SharedPreferences múltiples veces
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    _escucharDecisionPasajero();
+    _iniciarConexiones();
     
-    // Configuración de la animación de pulso
     _controller = AnimationController(
       vsync: this,
       lowerBound: 0.5,
@@ -32,33 +33,61 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
     )..repeat();
   }
 
-  void _escucharDecisionPasajero() async {
+  void _iniciarConexiones() async {
     final prefs = await SharedPreferences.getInstance();
-    final viajeId = prefs.getInt('current_viaje_id');
+    final idGuardado = prefs.getInt('current_viaje_id');
 
-    if (viajeId != null) {
-      _socketService.conectar(viajeId).listen((mensaje) {
+    if (idGuardado != null) {
+      setState(() => _viajeId = idGuardado);
+      print("DEBUG: Conectando sockets para viaje ID: $_viajeId");
+
+      // 1. Canal específico del viaje
+      _viajeSocket.conectar(_viajeId!).listen((mensaje) {
         final data = jsonDecode(mensaje);
-        
+        print("DEBUG WS VIAJE: ${data['type']}");
+
         if (data['type'] == 'oferta_aceptada') {
-          if (mounted) Navigator.pushReplacementNamed(context, '/viaje_en_curso_moto');
+          // Navegar a la pantalla de éxito (asegúrate que el nombre coincida en main.dart)
+          if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/aceptar_viaje', (route) => false);
         }
         
         if (data['type'] == 'viaje_cancelado') {
-          _volverASolicitudes("El pasajero ha cancelado el viaje o aceptó otra oferta.");
+          _finalizarYSalir("El pasajero canceló el viaje.");
+        }
+      }, onError: (err) => print("Error en WS Viaje: $err"));
+
+      // 2. Canal general de mototaxi
+      _motoSocket.conectar().listen((mensaje) {
+        final data = jsonDecode(mensaje);
+        // Comparación segura convirtiendo ambos a String
+        if (data['type'] == 'cancelar_viaje') {
+          _finalizarYSalir("Este viaje ya no está disponible.");
         }
       });
+    } else {
+      print("⚠️ Error: viajeId no encontrado en SharedPreferences.");
+      if (mounted) Navigator.pushReplacementNamed(context, '/solicitudes');
+    }
+  }
+
+  void _finalizarYSalir(String mensaje) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
+      Navigator.pushNamedAndRemoveUntil(context, '/solicitudes', (route) => false);
     }
   }
 
   void _retirarOferta() async {
+    if (_viajeId == null) return; // Seguridad contra null
+
     setState(() => _cancelando = true);
+    // Asegúrate que tu authService.cancelarOfertaPropia() use el ID local o lo busque bien
     final exito = await _authService.cancelarOfertaPropia();
   
-    if (exito) {
-      if (mounted) Navigator.pushReplacementNamed(context, '/solicitudes');
-    } else {
-      if (mounted) {
+    if (mounted) {
+      if (exito) {
+        Navigator.pushNamedAndRemoveUntil(context, '/solicitudes', (route) => false);
+      } else {
         setState(() => _cancelando = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("No se pudo retirar la oferta")),
@@ -67,17 +96,11 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
     }
   }
 
-  void _volverASolicitudes(String mensaje) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
-      Navigator.pushReplacementNamed(context, '/solicitudes');
-    }
-  }
-
   @override
   void dispose() {
     _controller.dispose();
-    _socketService.desconectar();
+    _viajeSocket.desconectar();
+    _motoSocket.desconectar();
     super.dispose();
   }
 
@@ -92,75 +115,46 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 1. Animación de Radar/Pulso
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  _buildPulse(),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF7931E),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.moped, color: Colors.white, size: 40),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 50),
-              
-              // 2. Textos Informativos
-              const Text(
-                "Oferta enviada",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "El pasajero está revisando tu propuesta. Mantente atento a la confirmación.",
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600], fontSize: 15, height: 1.4),
-              ),
-              
-              const SizedBox(height: 60),
-
-              // 3. Tarjeta de "Tips" o Estado (Opcional, mejora la estética)
-              Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: Row(
+              // Tamaño fijo para que el pulso no desplace el texto
+              SizedBox(
+                height: 220,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    const Icon(Icons.info_outline, color: Color(0xFFF7931E), size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "No cierres esta pantalla para no perder la conexión.",
-                        style: TextStyle(color: Colors.orange[900], fontSize: 12),
+                    _buildPulse(),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF7931E),
+                        shape: BoxShape.circle,
                       ),
+                      child: const Icon(Icons.moped, color: Colors.white, size: 40),
                     ),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 40),
-
-              // 4. Botón de Retirar Oferta (Estilo Limpio)
+              const SizedBox(height: 30),
+              const Text(
+                "Oferta enviada",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "El pasajero está revisando tu propuesta.\nMantente atento.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[600], fontSize: 15, height: 1.4),
+              ),
+              const SizedBox(height: 50),
               if (!_cancelando)
                 TextButton(
-                  onPressed: _retirarOferta,
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  ),
+                  onPressed: _viajeId == null ? null : _retirarOferta,
                   child: const Text(
                     "RETIRAR MI OFERTA",
-                    style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                    style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
                   ),
                 )
               else
-                const CircularProgressIndicator(strokeWidth: 2, color: Colors.grey),
+                const CircularProgressIndicator(color: Colors.grey),
             ],
           ),
         ),
@@ -168,7 +162,6 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
     );
   }
 
-  // Widget que crea el efecto de ondas de radar
   Widget _buildPulse() {
     return AnimatedBuilder(
       animation: _controller,
