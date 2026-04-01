@@ -35,23 +35,23 @@ class _ViajeScreenState extends State<ViajeScreen> {
     "Pomuch Hacienda Dzodzil": [20.16802372650526, -90.23085213931239],
   };
 
-  List<Destino> _destinos = [];
-  Destino? _destinoSeleccionado;
+  //List<Destino> _destinos = [];
+  //Destino? _destinoSeleccionado;
 
   @override
   void initState() {
     super.initState();
     _determinarPosicion();
-    _cargarDestinos();
+    //_cargarDestinos();
   }
 
-  Future<void> _cargarDestinos() async {
-  // Aquí llamas a tu servicio de API
-  final resultados = await _authService.getDestinos(); 
-  setState(() {
-    _destinos = resultados;
-  });
-}
+//   Future<void> _cargarDestinos() async {
+//   // Aquí llamas a tu servicio de API
+//   final resultados = await _authService.getDestinos(); 
+//   setState(() {
+//     _destinos = resultados;
+//   });
+// }
 
   Future<void> _determinarPosicion() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
