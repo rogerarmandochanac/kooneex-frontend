@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/auth_service.dart';
+import '../models/destino.dart';
 
 class ViajeScreen extends StatefulWidget {
   const ViajeScreen({super.key});
@@ -34,11 +35,23 @@ class _ViajeScreenState extends State<ViajeScreen> {
     "Pomuch Hacienda Dzodzil": [20.16802372650526, -90.23085213931239],
   };
 
+  List<Destino> _destinos = [];
+  Destino? _destinoSeleccionado;
+
   @override
   void initState() {
     super.initState();
     _determinarPosicion();
+    _cargarDestinos();
   }
+
+  Future<void> _cargarDestinos() async {
+  // Aquí llamas a tu servicio de API
+  final resultados = await _authService.getDestinos(); 
+  setState(() {
+    _destinos = resultados;
+  });
+}
 
   Future<void> _determinarPosicion() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();

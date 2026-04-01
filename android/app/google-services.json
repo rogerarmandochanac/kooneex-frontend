@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1011336690344",
+    "project_id": "kooneex-app",
+    "storage_bucket": "kooneex-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1011336690344:android:9e9fd2f435d386f01c209d",
+        "android_client_info": {
+          "package_name": "com.kooneex.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_lNCDZ2mJgGbdcyNEhUgfUe16ercRs44"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

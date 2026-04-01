@@ -4,6 +4,8 @@ import '../services/auth_service.dart';
 import '../services/mototaxi_socket_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/push_notification_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class SolicitudesScreen extends StatefulWidget {
   const SolicitudesScreen({super.key});
@@ -24,6 +26,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
     _iniciarRastreoUbicacion();
     _escucharSolicitudes();
     _cargarViajes();
+    _initPushNotifications();
   }
 
   void _escucharSolicitudes() {
@@ -35,6 +38,28 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
       }
     });
   }
+
+  void _initPushNotifications() async {
+  await PushNotificationService.initializeApp();
+
+    // Escuchar notificaciones mientras la app está ABIERTA (Foreground)
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print('Nueva notificación recibida: ${message.notification?.title}');
+      
+      // Si llega una nueva solicitud, refrescamos la lista automáticamente
+      if (message.data['type'] == 'nueva_solicitud') {
+        _cargarViajes(); 
+        
+        // Opcional: Mostrar un aviso visual rápido
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("${message.notification?.body}"),
+            backgroundColor: Colors.orange,
+          )
+      );
+    }
+  });
+}
 
   Future<void> _cargarViajes() async {
     final viajes = await _authService.obtenerViajesDisponibles();

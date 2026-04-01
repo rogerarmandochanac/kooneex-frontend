@@ -11,10 +11,18 @@ import 'screens/aceptar_viaje_screen.dart'; // La crearemos ahora
 import 'screens/viaje_en_curso_screen.dart'; // La crearemos ahora
 import 'screens/viaje_en_curso_pasajero_screen.dart'; // La crearemos ahora
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   // Asegura que los servicios de Flutter estén listos antes de ejecutar la app
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    // 2. Inicializa Firebase
+    await Firebase.initializeApp();
+    print("✅ Firebase conectado con éxito");
+  } catch (e) {
+    print("❌ Error al iniciar Firebase: $e");
+  }
 
   // Configuración opcional: Forzar orientación vertical (estilo móvil)
   await SystemChrome.setPreferredOrientations([

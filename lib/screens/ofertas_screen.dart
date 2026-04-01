@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/viaje_socket_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import '../services/push_notification_service.dart'; // Tu servicio de notificaciones
 
 class OfertasScreen extends StatefulWidget {
   const OfertasScreen({super.key});
@@ -21,6 +23,31 @@ class _OfertasScreenState extends State<OfertasScreen> {
   void initState() {
     super.initState();
     _escucharOfertas();
+    _configurarNotificacionesPush();
+  }
+
+  void _configurarNotificacionesPush() async{
+    await PushNotificationService.initializeApp();
+    // 1. Escuchar mensajes cuando la app está en primer plano
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print("🔔 Notificación recibida en primer plano: ${message.data['type']}");
+      
+      if (message.data['type'] == 'nueva_oferta') {
+        // Refrescamos la lista de ofertas automáticamente
+        _cargarOfertasIniciales();
+        
+        // Opcional: Mostrar un aviso rápido tipo Toast o SnackBar
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("¡Has recibido una nueva oferta!"),
+              backgroundColor: Color(0xFFF7931E),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    });
   }
 
   Future<void> _escucharOfertas() async {
@@ -39,6 +66,7 @@ class _OfertasScreenState extends State<OfertasScreen> {
     }
   }
 
+  
   Future<void> _cargarOfertasIniciales() async {
     // Solo mostramos el loading completo la primera vez para no interrumpir la vista
     if (_ofertas.isEmpty) setState(() => _estaCargando = true);
@@ -51,6 +79,9 @@ class _OfertasScreenState extends State<OfertasScreen> {
       });
     }
   }
+
+  
+  
 
   @override
   Widget build(BuildContext context) {
