@@ -25,7 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   
   String _selectedRol = 'pasajero';
   File? _imageFile; // Para la foto de registro [cite: 50]
-  bool _isObscure = true;
+  final bool _isObscure = true;
 
   // Lógica de captura de foto (Sustituye a abrir_camara_nativa) [cite: 50]
   Future<void> _takePhoto() async {

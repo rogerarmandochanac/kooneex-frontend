@@ -1,5 +1,4 @@
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class ViajeSocketService {
   WebSocketChannel? _channel;

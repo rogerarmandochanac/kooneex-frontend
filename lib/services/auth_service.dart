@@ -268,7 +268,7 @@ Future<bool> cancelarOfertaPropia() async {
   final viajeId = prefs.getInt('current_viaje_id');
   
   final response = await http.delete(
-    Uri.parse('$_baseUrl/ofertas/${viajeId}/rechazar/'), // Tu endpoint de Django
+    Uri.parse('$_baseUrl/ofertas/$viajeId/rechazar/'), // Tu endpoint de Django
      headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',

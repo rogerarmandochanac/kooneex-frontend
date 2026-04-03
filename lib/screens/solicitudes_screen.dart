@@ -124,7 +124,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
 
   Widget _buildSolicitudItem(dynamic viaje) {
     // Usamos un controlador local para cada item de la lista
-    final TextEditingController _tarifaController = TextEditingController(text: viaje['costo_estimado'].toString());
+    final TextEditingController tarifaController = TextEditingController(text: viaje['costo_estimado'].toString());
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -206,7 +206,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
                       border: Border.all(color: Colors.grey[200]!),
                     ),
                     child: TextField(
-                      controller: _tarifaController,
+                      controller: tarifaController,
                       keyboardType: TextInputType.number,
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                       decoration: const InputDecoration(
@@ -224,7 +224,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
                   child: SizedBox(
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: () => _enviarOferta(viaje['id'], _tarifaController.text),
+                      onPressed: () => _enviarOferta(viaje['id'], tarifaController.text),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF7931E),
                         foregroundColor: Colors.white,

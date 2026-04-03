@@ -313,7 +313,7 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 5)],
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 5)],
       ),
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,

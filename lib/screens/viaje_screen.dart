@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/auth_service.dart';
-import '../models/destino.dart';
 
 class ViajeScreen extends StatefulWidget {
   const ViajeScreen({super.key});
