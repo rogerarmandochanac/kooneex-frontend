@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/auth_service.dart';
+import '../models/destino.dart';
 
 class ViajeScreen extends StatefulWidget {
   const ViajeScreen({super.key});
@@ -16,6 +17,9 @@ class _ViajeScreenState extends State<ViajeScreen> {
   double? _origenLat, _origenLon;
   double? _destinoLat, _destinoLon;
   String _destinoNombre = "Selecciona hacia dónde vas";
+  List<Destino> _destinos = []; 
+  Destino? _destinoSeleccionado; // Ahora guardamos el OBJETO completo
+  bool _cargandoDestinos = true;
   
   final _cantidadController = TextEditingController(text: "1");
   final _referenciaController = TextEditingController();
@@ -41,16 +45,21 @@ class _ViajeScreenState extends State<ViajeScreen> {
   void initState() {
     super.initState();
     _determinarPosicion();
-    //_cargarDestinos();
+    _cargarDestinos();
   }
 
-//   Future<void> _cargarDestinos() async {
-//   // Aquí llamas a tu servicio de API
-//   final resultados = await _authService.getDestinos(); 
-//   setState(() {
-//     _destinos = resultados;
-//   });
-// }
+  Future<void> _cargarDestinos() async {
+    try {
+      final lista = await _authService.getDestinos(); // Implementar en AuthService
+      setState(() {
+        _destinos = lista;
+        _cargandoDestinos = false;
+      });
+    } catch (e) {
+      setState(() => _cargandoDestinos = false);
+      _showSnackBar("Error al cargar destinos", isError: true);
+    }
+  }
 
   Future<void> _determinarPosicion() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -70,97 +79,66 @@ class _ViajeScreenState extends State<ViajeScreen> {
     });
   }
 
-   void _solicitarViaje() async {
-    if (!_origenDetectado || _destinoLat == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Falta ubicación u origen")),
-      );
+  void _solicitarViaje() async {
+    if (!_origenDetectado || _destinoSeleccionado == null) {
+      _showSnackBar("Selecciona un destino y espera al GPS", isError: true);
       return;
     }
 
-    final datos = {
-      "origen_lat": _origenLat,
-      "origen_lon": _origenLon,
-      "destino_lat": _destinoLat,
-      "destino_lon": _destinoLon,
-      "cantidad_pasajeros": int.parse(_cantidadController.text),
-      "referencia": _referenciaController.text,
+    // Preparamos el mapa para el backend
+    final datosViaje = {
+      "origen_lat": double.parse(_origenLat!.toStringAsFixed(6)),
+      "origen_lon": double.parse(_origenLon!.toStringAsFixed(6)),
+      "destino": _destinoSeleccionado!.id, // Enviamos el ID del modelo Destino
+      "cantidad_pasajeros": int.tryParse(_cantidadController.text) ?? 1,
+      "referencia": _referenciaController.text.trim(),
     };
 
-    // Aquí llamarías a tu servicio (lo crearemos a continuación)
-    final exito = await _authService.crearViaje(datos);
+    _showLoading();
+    final exito = await _authService.crearViaje(datosViaje);
+    if (mounted) Navigator.pop(context); // Quitar loading
 
     if (exito) {
-      // Si el viaje se crea, vas a la pantalla de tarifas (como en tu Kivy)
       Navigator.pushReplacementNamed(context, '/ofertas');
+    } else {
+      _showSnackBar("No se pudo crear el viaje", isError: true);
     }
   }
 
   void _abrirSeleccionDestino() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true, // Permite que el modal crezca si hay muchos items
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
-      ),
-      builder: (context) {
-        // DraggableScrollableSheet hace que el modal sea deslizable y use bien el espacio
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6, // Empieza al 60% de la pantalla
-          minChildSize: 0.4,     // Mínimo 40%
-          maxChildSize: 0.9,     // Máximo 90%
-          expand: false,
-          builder: (context, scrollController) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // Indicador de arrastre (la rayita gris)
-                  Container(
-                    width: 40, 
-                    height: 4, 
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300], 
-                      borderRadius: BorderRadius.circular(10)
-                    )
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    "Destinos Disponibles", 
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
-                  ),
-                  const SizedBox(height: 10),
-                  
-                  // Cambiamos el Column por un ListView con scrollController
-                  Expanded(
-                    child: ListView.builder(
-                      controller: scrollController,
-                      itemCount: _destinosPredefinidos.length,
-                      itemBuilder: (context, index) {
-                        String nombre = _destinosPredefinidos.keys.elementAt(index);
-                        return ListTile(
-                          leading: const Icon(Icons.location_on, color: Color(0xFFF7931E)),
-                          title: Text(nombre, style: const TextStyle(fontWeight: FontWeight.w500)),
-                          onTap: () {
-                            setState(() {
-                              _destinoNombre = nombre;
-                              _destinoLat = _destinosPredefinidos[nombre]![0];
-                              _destinoLon = _destinosPredefinidos[nombre]![1];
-                            });
-                            Navigator.pop(context);
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      expand: false,
+      builder: (context, scrollController) {
+        if (_cargandoDestinos) return const Center(child: CircularProgressIndicator());
+        
+        return ListView.builder(
+          controller: scrollController,
+          itemCount: _destinos.length,
+          itemBuilder: (context, index) {
+            final destino = _destinos[index];
+            return ListTile(
+              leading: const Icon(Icons.location_on, color: Color(0xFFF7931E)),
+              title: Text(destino.nombre),
+              onTap: () {
+                setState(() {
+                  _destinoSeleccionado = destino;
+                  _destinoNombre = destino.nombre;
+                  _destinoLat = destino.latitud;
+                  _destinoLon = destino.longitud; // Guardamos la referencia completa
+                });
+                Navigator.pop(context);
+              },
             );
           },
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +148,7 @@ class _ViajeScreenState extends State<ViajeScreen> {
         elevation: 0,
         backgroundColor: Colors.white,
         title: const Text("Nuevo Viaje", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SingleChildScrollView(
@@ -250,9 +229,9 @@ class _ViajeScreenState extends State<ViajeScreen> {
             // Input de Referencia
             _buildCustomInput(
               controller: _referenciaController,
-              label: "Referencia (Ej: Casa portón azul)",
+              label: "Referencia donde sera \nrecogido(Ej: Casa portón azul)",
               icon: Icons.notes,
-              maxLines: 2,
+              maxLines: 4,
             ),
             
             const SizedBox(height: 40),
@@ -312,6 +291,27 @@ class _ViajeScreenState extends State<ViajeScreen> {
         fillColor: Colors.grey[50],
         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
         focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFF7931E))),
+      ),
+    );
+  }
+
+  // Añadir esto al final de _ViajeScreenState en viaje_screen.dart
+  void _showSnackBar(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showLoading() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFF7931E)),
       ),
     );
   }

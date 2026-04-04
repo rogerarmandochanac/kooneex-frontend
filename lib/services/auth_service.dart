@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/destino.dart';
 
 class AuthService {
   // Cambia esta URL por la de tu servidor Django
@@ -28,6 +29,8 @@ class AuthService {
       return {'success': false, 'message': 'Error de conexión: $e'};
     }
   }
+
+
 
   // ESTA ES LA FUNCIÓN QUE FALTA O ESTÁ MAL DEFINIDA
   Future<Map<String, dynamic>> register({
@@ -104,6 +107,34 @@ class AuthService {
       print("Error verificando viaje: $e");
     }
     return {'mensaje': 'none'};
+  }
+
+  Future<List<Destino>> getDestinos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/destino/'),
+        headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Decodificamos el cuerpo de la respuesta que es una List
+        List<dynamic> data = json.decode(response.body);
+        
+        // Convertimos cada mapa de la lista en un objeto Destino
+        return data.map((json) => Destino.fromJson(json)).toList();
+      } else {
+        throw Exception("Error del servidor: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("Error en getDestinos: $e");
+      return []; // Devolvemos lista vacía para evitar que la UI falle
+    }
   }
 
 Future<bool> crearViaje(Map<String, dynamic> datos) async {
