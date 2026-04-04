@@ -89,10 +89,11 @@ class _ViajeScreenState extends State<ViajeScreen> {
     final datosViaje = {
       "origen_lat": double.parse(_origenLat!.toStringAsFixed(6)),
       "origen_lon": double.parse(_origenLon!.toStringAsFixed(6)),
-      "destino": _destinoSeleccionado!.id, // Enviamos el ID del modelo Destino
+      "destino_id": _destinoSeleccionado!.id, // Enviamos el ID del modelo Destino
       "cantidad_pasajeros": int.tryParse(_cantidadController.text) ?? 1,
       "referencia": _referenciaController.text.trim(),
     };
+    
 
     _showLoading();
     final exito = await _authService.crearViaje(datosViaje);

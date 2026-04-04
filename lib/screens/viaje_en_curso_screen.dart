@@ -99,7 +99,6 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
             setState(() {
               _viaje = viajeActivo;
               if (esPrimeraVez) _estaCargando = false;
-              _puntosRuta = [latLng.LatLng(cLat, cLon),latLng.LatLng(pLat, pLon),];
               _obtenerRutaOSRM(cLat, cLon);
             });
           
@@ -281,7 +280,7 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
                 contentPadding: EdgeInsets.zero,
                 leading: const CircleAvatar(backgroundColor: Color(0xFFF7931E), child: Icon(Icons.person, color: Colors.white)),
                 title: Text(_viaje?['pasajero_nombre'] ?? "Pasajero", style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("Destino: ${_viaje?['destino_nombre'] ?? 'No especificado'}"),
+                subtitle: Text("Destino: ${_viaje?['destino']?['nombre'] ?? 'No especificado'}"),
                 trailing: Text("\$${_viaje?['costo_final'] ?? '0'}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green)),
               ),
               const Divider(),
@@ -289,7 +288,7 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildInfoItem(Icons.group, "${_viaje?['cantidad_pasajeros'] ?? '1'}"),
-                  _buildInfoItem(Icons.straighten, "${_viaje?['distancia_km'] ?? '0'} km"),
+                  _buildInfoItem(Icons.straighten, "${_viaje?['distancia_total_km'] ?? '0'} km"),
                   _buildInfoItem(Icons.phone_android, "${_viaje?['pasajero_telefono'] ?? 'S/N'}"),
                 ],
               ),

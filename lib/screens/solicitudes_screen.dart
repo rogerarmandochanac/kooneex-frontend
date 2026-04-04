@@ -169,7 +169,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
                           const SizedBox(width: 12),
                           Icon(Icons.near_me_outlined, size: 16, color: Colors.grey[600]),
                           const SizedBox(width: 4),
-                          Text("${viaje['distancia_km']} km", style: TextStyle(color: Colors.grey[600])),
+                          Text("${viaje['distancia_total_km']} km", style: TextStyle(color: Colors.grey[600])),
                         ],
                       ),
                     ],
@@ -184,7 +184,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
               const Text("REFERENCIA", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
               const SizedBox(height: 5),
               Text(
-                "📍 ${viaje['referencia']}",
+                "📍Recoger ${viaje['referencia']}, llevar a ${viaje['destino']?['nombre']}",
                 style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.black87),
               ),
               const SizedBox(height: 20),

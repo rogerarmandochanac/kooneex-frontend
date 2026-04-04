@@ -32,7 +32,7 @@ class _AceptarViajeScreenState extends State<AceptarViajeScreen> {
         setState(() {
           // Separamos los datos para darles estilos individuales Pro
           _pasajeroNombre = viaje['pasajero_nombre'] ?? "Pasajero";
-          _distancia = "${viaje['distancia_km']} km";
+          _distancia = "${viaje['distancia_total_km']} km";
           _costoFinal = "\$${viaje['costo_final']}";
           _cargando = false;
         });
