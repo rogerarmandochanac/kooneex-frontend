@@ -16,12 +16,15 @@ class SolicitudesScreen extends StatefulWidget {
 }
 
 class _SolicitudesScreenState extends State<SolicitudesScreen> {
+  // CLAVE PARA CONTROLAR EL DRAWER
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  
   final _socketService = MototaxiSocketService();
   final _authService = AuthService();
+  
   List<dynamic> _viajes = [];
   bool _estaCargando = true;
   StreamSubscription? _socketSubscription;
-  StreamSubscription<Position>? _locationSubscription;
 
   @override
   void initState() {
@@ -32,51 +35,30 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
     _initPushNotifications();
   }
 
-  String formatImageUrl(String? url) {
-  if (url == null || url.isEmpty) return '';
-  
-  // Si la URL trae el puerto 8000, lo eliminamos para que pase por Nginx (puerto 80)
-  if (url.contains(':8000')) {
-    return url.replaceFirst(':8000', '');
-  }
-  
-  return url;
-}
+  // --- LÓGICA DE SOCKETS Y NOTIFICACIONES ---
 
   void _configurarEscuchaSocket() {
-      _socketSubscription = _socketService.conectar().listen(
-        (mensaje) {
-          final data = jsonDecode(mensaje);
-          if (data['type'] == 'nuevo_viaje' || data['type'] == 'cancelar_viaje') {
-            _cargarViajes();
-          }
-        },
-        onError: (err) => print("Error en socket solicitudes: $err"),
-        cancelOnError: false,
-      );
-    }
+    _socketSubscription = _socketService.conectar().listen(
+      (mensaje) {
+        final data = jsonDecode(mensaje);
+        if (data['type'] == 'nuevo_viaje' || data['type'] == 'cancelar_viaje') {
+          _cargarViajes();
+        }
+      },
+      onError: (err) => debugPrint("Error en socket solicitudes: $err"),
+      cancelOnError: false,
+    );
+  }
 
   void _initPushNotifications() async {
-  await PushNotificationService.initializeApp();
-
-    // Escuchar notificaciones mientras la app está ABIERTA (Foreground)
+    await PushNotificationService.initializeApp();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    print('Nueva notificación recibida: ${message.notification?.title}');
-      
-      // Si llega una nueva solicitud, refrescamos la lista automáticamente
       if (message.data['type'] == 'nueva_solicitud') {
         _cargarViajes(); 
-        
-        // Opcional: Mostrar un aviso visual rápido
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("${message.notification?.body}"),
-            backgroundColor: Colors.orange,
-          )
-      );
-    }
-  });
-}
+        _showSnackBar("${message.notification?.body}");
+      }
+    });
+  }
 
   Future<void> _cargarViajes() async {
     final viajes = await _authService.obtenerViajesDisponibles();
@@ -88,14 +70,74 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
     }
   }
 
+  // --- INTERFAZ: DRAWER (SIN FOTO DE PERFIL) ---
+
+  Widget _buildDrawer() {
+    return Drawer(
+      width: MediaQuery.of(context).size.width * 0.80,
+      child: Column(
+        children: [
+          // Cabecera simple con Icono
+          const UserAccountsDrawerHeader(
+            decoration: BoxDecoration(color: Colors.white),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Color(0xFFF7931E),
+              child: Icon(Icons.person, color: Colors.white, size: 40),
+            ),
+            accountName: Text("Conductor Kooneex", 
+              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            accountEmail: Text("Panel de Solicitudes", 
+              style: TextStyle(color: Colors.grey)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.lock_outline, color: Colors.black87),
+            title: const Text("Cambiar Contraseña"),
+            onTap: () {
+              Navigator.pop(context); 
+              Navigator.pushNamed(context, '/cambiar-password'); 
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.history, color: Colors.black87),
+            title: const Text("Mis Servicios"),
+            onTap: () => Navigator.pop(context),
+          ),
+          const Spacer(),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text("Cerrar Sesión", style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              await _authService.logout();
+              if (!mounted) return;
+              Navigator.pushNamedAndRemoveUntil(
+                context, 
+                '/login', 
+                (route) => false,
+              );
+              _showSnackBar("Sesión cerrada correctamente");
+            },
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: _buildDrawer(),
       backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: Colors.black),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
         title: const Text(
           "Viajes Solicitados",
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20),
@@ -108,7 +150,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
         ],
       ),
       body: _estaCargando 
-          ? _buildLoadingState()
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFF7931E)))
           : _viajes.isEmpty
               ? _buildEmptyState()
               : ListView.builder(
@@ -119,11 +161,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
     );
   }
 
-  Widget _buildLoadingState() {
-    return const Center(
-      child: CircularProgressIndicator(color: Color(0xFFF7931E), strokeWidth: 5),
-    );
-  }
+  // --- WIDGETS DE LA LISTA (Igual que antes) ---
 
   Widget _buildEmptyState() {
     return Center(
@@ -140,7 +178,6 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
   }
 
   Widget _buildSolicitudItem(dynamic viaje) {
-    // Usamos un controlador local para cada item de la lista
     final TextEditingController tarifaController = TextEditingController(text: viaje['costo_estimado'].toString());
 
     return Container(
@@ -149,11 +186,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15, offset: const Offset(0, 5)),
         ],
       ),
       child: Padding(
@@ -166,91 +199,42 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.grey[100],
-                  backgroundImage: NetworkImage(formatImageUrl(viaje['pasajero_foto'])?? 'https://via.placeholder.com/150'),
+                  child: const Icon(Icons.person, color: Colors.grey),
                 ),
                 const SizedBox(width: 15),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        viaje['pasajero_nombre'] ?? "Usuario",
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
-                      ),
+                      Text(viaje['pasajero_nombre'] ?? "Usuario", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.people_outline, size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text("${viaje['cantidad_pasajeros']} pas.", style: TextStyle(color: Colors.grey[600])),
-                          const SizedBox(width: 12),
-                          Icon(Icons.near_me_outlined, size: 16, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text("${viaje['distancia_total_km']} km", style: TextStyle(color: Colors.grey[600])),
-                        ],
-                      ),
+                      Text("${viaje['cantidad_pasajeros']} pas. | ${viaje['distancia_total_km']} km", style: TextStyle(color: Colors.grey[600])),
                     ],
                   ),
                 ),
               ],
             ),
-            
-            const Divider(height: 30, thickness: 0.5),
-
-            if (viaje['referencia'] != null && viaje['referencia'].toString().isNotEmpty) ...[
-              const Text("REFERENCIA", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
-              const SizedBox(height: 5),
-              Text(
-                "📍Recoger ${viaje['referencia']}, llevar a ${viaje['destino']?['nombre']}",
-                style: const TextStyle(fontStyle: FontStyle.italic, color: Colors.black87),
-              ),
-              const SizedBox(height: 20),
-            ],
-
-            const Text("TU OFERTA (\$)", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1)),
-            const SizedBox(height: 10),
-            
+            const Divider(height: 30),
+            if (viaje['referencia'] != null && viaje['referencia'].toString().isNotEmpty)
+              Text("📍 ${viaje['referencia']}", style: const TextStyle(fontStyle: FontStyle.italic)),
+            const SizedBox(height: 15),
             Row(
               children: [
-                // Input de Tarifa más Pro
                 Expanded(
                   flex: 2,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[200]!),
-                    ),
-                    child: TextField(
-                      controller: tarifaController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        prefixText: "\$ ",
-                        prefixStyle: TextStyle(color: Color(0xFFF7931E), fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                  child: TextField(
+                    controller: tarifaController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(prefixText: "\$ ", labelText: "Tu Oferta"),
                   ),
                 ),
                 const SizedBox(width: 15),
-                // Botón de Enviar
                 Expanded(
                   flex: 3,
-                  child: SizedBox(
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () => _enviarOferta(viaje['id'], tarifaController.text),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF7931E),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text("ENVIAR OFERTA", 
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    ),
+                  child: ElevatedButton(
+                    onPressed: () => _enviarOferta(viaje['id'], tarifaController.text),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF7931E)),
+                    child: const Text("ENVIAR OFERTA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -262,42 +246,31 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
   }
 
   void _enviarOferta(int viajeId, String monto) async {
-    // Pequeña validación antes de enviar
     if (monto.isEmpty || double.tryParse(monto) == null || double.parse(monto) <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Ingresa un monto válido")),
-      );
+      _showSnackBar("Monto inválido", isError: true);
       return;
     }
-
     final exito = await _authService.enviarOferta(viajeId, monto);
-    if (exito) {
-      if (mounted) Navigator.pushNamed(context, '/esperando_confirmacion');
-    } else {
-      if (mounted) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('current_viaje_id', viajeId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Error al enviar oferta. Intenta de nuevo.")),
-        );
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _socketService.desconectar();
-    super.dispose();
+    if (exito && mounted) Navigator.pushNamed(context, '/esperando_confirmacion');
   }
 
   void _iniciarRastreoUbicacion() async {
     LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.deniedForever) return;
-    }
-
+    if (permission == LocationPermission.denied) await Geolocator.requestPermission();
     Position position = await Geolocator.getCurrentPosition();
     await _authService.actualizarUbicacion(position.latitude, position.longitude);
+  }
+
+  void _showSnackBar(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: isError ? Colors.red : Colors.orange),
+    );
+  }
+
+  @override
+  void dispose() {
+    _socketSubscription?.cancel();
+    _socketService.desconectar();
+    super.dispose();
   }
 }
