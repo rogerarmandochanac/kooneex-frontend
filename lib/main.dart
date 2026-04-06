@@ -10,6 +10,7 @@ import 'screens/espera_viaje_screen.dart'; // La crearemos ahora
 import 'screens/aceptar_viaje_screen.dart'; // La crearemos ahora
 import 'screens/viaje_en_curso_screen.dart'; // La crearemos ahora
 import 'screens/viaje_en_curso_pasajero_screen.dart'; // La crearemos ahora
+import 'screens/cambiar_password_screen.dart'; 
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:firebase_core/firebase_core.dart';
 
@@ -68,6 +69,7 @@ class KooneexApp extends StatelessWidget {
         '/aceptar_viaje': (context) => const AceptarViajeScreen(),
         '/viaje_en_curso': (context) => const ViajeEnCursoScreen(),
         '/viaje_en_curso_pasajero': (context) => const ViajeEnCursoPasajeroScreen(),
+        '/cambiar-password': (context) => const CambiarPasswordScreen(),
       },
     );
   }

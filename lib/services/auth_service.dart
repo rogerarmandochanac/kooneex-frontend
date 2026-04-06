@@ -6,7 +6,7 @@ import '../models/destino.dart';
 
 class AuthService {
   // Cambia esta URL por la de tu servidor Django
-  final String _baseUrl = "http://3.21.34.42:8000/api"; 
+  final String _baseUrl = "http://192.168.1.105:8000/api"; 
 
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
@@ -360,6 +360,24 @@ Future<Map<String, dynamic>?> obtenerViajeActual() async {
 Future<void> logout() async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.clear(); // Borra todo: token, viajeId, etc.
+}
+
+// services/auth_service.dart
+Future<bool> cambiarPassword(String oldPass, String newPass) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token'); // Recupera tu token guardado
+  final response = await http.post(
+    Uri.parse('$_baseUrl/usuarios/cambiar-password/'),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    },
+    body: jsonEncode({
+      'old_password': oldPass,
+      'new_password': newPass,
+    }),
+  );
+  return response.statusCode == 200;
 }
 
 }

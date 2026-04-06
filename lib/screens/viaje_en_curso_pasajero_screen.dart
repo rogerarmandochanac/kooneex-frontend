@@ -17,7 +17,7 @@ class ViajeEnCursoPasajeroScreen extends StatefulWidget {
 }
 
 class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen> {
-  final String _baseUrl = "http://3.21.34.42:8000/api";
+  final String _baseUrl = "http://192.168.1.105:8000/api";
   final MapController _mapController = MapController();
   final _viajeSocket = ViajeSocketService(); // Instancia del socket
   

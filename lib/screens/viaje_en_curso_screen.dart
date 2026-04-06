@@ -23,7 +23,7 @@ class ViajeEnCursoScreen extends StatefulWidget {
 class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
   StreamSubscription<Position>? _posicionSub;
   bool _seguirConductor = true; // Para controlar el auto-centrado
-  final String _baseUrl = "http://3.21.34.42:8000/api";
+  final String _baseUrl = "http://192.168.1.105:8000/api";
   final MapController _mapController = MapController();
 
   

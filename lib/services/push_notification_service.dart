@@ -33,7 +33,7 @@ class PushNotificationService {
 
     // Tu endpoint en Django para guardar el token del mototaxista
     await http.post(
-      Uri.parse('http://3.21.34.42:8000/api/usuarios/guardar_token/'),
+      Uri.parse('http://192.168.1.105:8000/api/usuarios/guardar_token/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $authToken',
