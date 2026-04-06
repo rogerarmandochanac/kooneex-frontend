@@ -17,7 +17,7 @@ class ViajeEnCursoPasajeroScreen extends StatefulWidget {
 }
 
 class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen> {
-  final String _baseUrl = "http://192.168.1.105:8000/api";
+  final String _baseUrl = "http://3.21.34.42:8000/api";
   final MapController _mapController = MapController();
   final _viajeSocket = ViajeSocketService(); // Instancia del socket
   
@@ -271,9 +271,8 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
                   backgroundColor: Color(0xFFF7931E),
                   child: Icon(Icons.person, color: Colors.white, size: 30),
                 ),
-                title: Text(_viaje?['conductor_nombre'] ?? "Conductor", 
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                subtitle: Text("Moto: ${_viaje?['conductor_placa'] ?? 'Verde con Blanco'}"),
+                title: Text(_viaje?['mototaxista_nombre'] ?? "Conductor", 
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                 trailing: IconButton(
                   icon: const Icon(Icons.phone, color: Colors.green, size: 30),
                   onPressed: _llamarConductor,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
@@ -19,25 +20,41 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
   final _authService = AuthService();
   List<dynamic> _viajes = [];
   bool _estaCargando = true;
+  StreamSubscription? _socketSubscription;
+  StreamSubscription<Position>? _locationSubscription;
 
   @override
   void initState() {
     super.initState();
     _iniciarRastreoUbicacion();
-    _escucharSolicitudes();
+    _configurarEscuchaSocket();
     _cargarViajes();
     _initPushNotifications();
   }
 
-  void _escucharSolicitudes() {
-    _socketService.conectar().listen((mensaje) {
-      final data = jsonDecode(mensaje);
-      //Si se escucha un nuevo viaje o se cancela el viaje carga el listado de viajes
-      if (data['type'] == 'nuevo_viaje' || data['type'] == 'cancelar_viaje') {
-        _cargarViajes();
-      }
-    });
+  String formatImageUrl(String? url) {
+  if (url == null || url.isEmpty) return '';
+  
+  // Si la URL trae el puerto 8000, lo eliminamos para que pase por Nginx (puerto 80)
+  if (url.contains(':8000')) {
+    return url.replaceFirst(':8000', '');
   }
+  
+  return url;
+}
+
+  void _configurarEscuchaSocket() {
+      _socketSubscription = _socketService.conectar().listen(
+        (mensaje) {
+          final data = jsonDecode(mensaje);
+          if (data['type'] == 'nuevo_viaje' || data['type'] == 'cancelar_viaje') {
+            _cargarViajes();
+          }
+        },
+        onError: (err) => print("Error en socket solicitudes: $err"),
+        cancelOnError: false,
+      );
+    }
 
   void _initPushNotifications() async {
   await PushNotificationService.initializeApp();
@@ -149,7 +166,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.grey[100],
-                  backgroundImage: NetworkImage(viaje['pasajero_foto'] ?? 'https://via.placeholder.com/150'),
+                  backgroundImage: NetworkImage(formatImageUrl(viaje['pasajero_foto'])?? 'https://via.placeholder.com/150'),
                 ),
                 const SizedBox(width: 15),
                 Expanded(

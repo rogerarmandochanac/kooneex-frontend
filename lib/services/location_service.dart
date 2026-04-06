@@ -11,10 +11,16 @@ class LocationService {
   factory LocationService() => _instance;
   LocationService._internal();
 
-  final String _baseUrl = "http://192.168.1.105:8000/api";
+  final String _baseUrl = "http://3.21.34.42:8000/api";
   StreamSubscription<Position>? _positionStreamSubscription;
 
-  // 2. Método para enviar la ubicación al servidor (PATCH)
+  // NUEVO: Controlador para notificar a la UI sobre cambios de posición
+  final _posicionController = StreamController<Position>.broadcast();
+  
+  // NUEVO: Stream público que escucharemos en la pantalla del mapa
+  Stream<Position> get posicionStream => _posicionController.stream;
+
+  // 2. Método para enviar la ubicación al servidor (PATCH/POST)
   Future<void> enviarUbicacionAlServidor(double lat, double lon) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -49,7 +55,6 @@ class LocationService {
 
   // 3. Lógica de permisos y rastreo activo
   Future<void> iniciarRastreo() async {
-    // Si ya hay un rastreo activo, no iniciamos otro para evitar el "frieze"
     if (_positionStreamSubscription != null) {
       debugPrint("ℹ️ El rastreo ya está activo.");
       return;
@@ -58,14 +63,12 @@ class LocationService {
     bool serviceEnabled;
     LocationPermission permission;
 
-    // Verificar si el GPS está encendido
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       debugPrint("GPS desactivado en el dispositivo");
       return;
     }
 
-    // Manejo de permisos
     permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -74,22 +77,27 @@ class LocationService {
 
     if (permission == LocationPermission.deniedForever) return;
 
-    // Actualización inmediata asíncrona (no bloquea la UI)
+    // Actualización inicial
     Geolocator.getCurrentPosition().then((position) {
       enviarUbicacionAlServidor(position.latitude, position.longitude);
+      _posicionController.add(position); // Notificar a la UI la posición inicial
     }).catchError((e) => debugPrint("Error al obtener posición inicial: $e"));
 
     // Configuración del rastro constante
     const locationSettings = LocationSettings(
       accuracy: LocationAccuracy.high,
-      distanceFilter: 10, // Se actualiza cada 50 metros
+      distanceFilter: 10, // Se actualiza cada 10 metros para Kooneex
     );
 
     _positionStreamSubscription = Geolocator.getPositionStream(
       locationSettings: locationSettings,
     ).listen(
       (Position position) {
+        // ACCIÓN 1: Sincronizar con el backend
         enviarUbicacionAlServidor(position.latitude, position.longitude);
+        
+        // ACCIÓN 2: Enviar al Stream para que el mapa se mueva en tiempo real
+        _posicionController.add(position); 
       },
       onError: (error) {
         debugPrint("❌ Error en el stream de ubicación: $error");

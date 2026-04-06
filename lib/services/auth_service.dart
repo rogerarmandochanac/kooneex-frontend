@@ -6,7 +6,7 @@ import '../models/destino.dart';
 
 class AuthService {
   // Cambia esta URL por la de tu servidor Django
-  final String _baseUrl = "http://192.168.1.105:8000/api"; 
+  final String _baseUrl = "http://3.21.34.42:8000/api"; 
 
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
@@ -183,11 +183,9 @@ Future<List<dynamic>> obtenerOfertas() async {
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      print("Error al obtener ofertas: ${response.statusCode}");
       return [];
     }
   } catch (e) {
-    print("Error de conexión en obtenerOfertas: $e");
     return [];
   }
 }
@@ -211,6 +209,7 @@ Future<bool> aceptarOferta(int ofertaId) async {
     return false;
   }
 }
+
 
 Future<bool> eliminarViaje() async {
   try {
@@ -354,7 +353,6 @@ Future<Map<String, dynamic>?> obtenerViajeActual() async {
     }
     return null;
   } catch (e) {
-    print("Error en obtenerViajeActual: $e");
     return null;
   }
 }

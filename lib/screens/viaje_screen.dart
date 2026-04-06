@@ -27,9 +27,9 @@ class _ViajeScreenState extends State<ViajeScreen> {
   final Map<String, List<double>> _destinosPredefinidos = {
     "Pomuch Centro": [20.13730, -90.17490],
     "Pomuch Soledad": [20.145780, -90.173459],
-    "Pomuch Nueva": [20.144052896584597, -90.17682172260673],
-    "Pomuch San Francisco": [20.146953764112478, -90.16952611440409],
-    "Pomuch Villa Lucrecia": [20.14155488415286, -90.16592122564514],
+    "Pomuch Nueva": [20.144052, -90.176821],
+    "Pomuch San Francisco": [20.146953, -90.169526],
+    "Pomuch Villa Lucrecia": [20.141554, -90.165921],
     "Pomuch San Diego": [20.141151975180843, -90.17287351110882],
     "Pomuch Santa Cristina": [20.135914063988263, -90.16540624153673],
     "Pomuch San pedro I": [20.13285181919244, -90.17321683384776],

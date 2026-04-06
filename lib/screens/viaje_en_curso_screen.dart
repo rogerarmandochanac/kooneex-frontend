@@ -8,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
+import 'package:geolocator/geolocator.dart';
 
 import '../services/location_service.dart';
 import '../services/offline_service.dart';
@@ -20,8 +21,12 @@ class ViajeEnCursoScreen extends StatefulWidget {
 }
 
 class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
-  final String _baseUrl = "http://192.168.1.105:8000/api";
+  StreamSubscription<Position>? _posicionSub;
+  bool _seguirConductor = true; // Para controlar el auto-centrado
+  final String _baseUrl = "http://3.21.34.42:8000/api";
   final MapController _mapController = MapController();
+
+  
   
   Map<String, dynamic>? _viaje;
   bool _estaCargando = true;
@@ -51,6 +56,18 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
         _cargarViajeActual(esPrimeraVez: false);
       }
     });
+
+    _posicionSub = LocationService().posicionStream.listen((Position pos) {
+    if (_mapaListo && _seguirConductor) {
+      _mapController.move(
+        latLng.LatLng(pos.latitude, pos.longitude),
+        _mapController.camera.zoom,
+      );
+      }
+    });
+    
+    LocationService().iniciarRastreo();
+
   }
 
   void _monitorearInternet() {
@@ -68,6 +85,7 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
   void dispose() {
     _timerRefresco?.cancel();
     _internetSubscription?.cancel();
+    _posicionSub?.cancel();
     super.dispose();
   }
 
@@ -96,15 +114,23 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
           double cLon = double.tryParse(viajeActivo['conductor_lon']?.toString() ?? "") ?? 0.0;
           double pLat = double.tryParse(viajeActivo['pasajero_lat']?.toString() ?? "") ?? 0.0;
           double pLon = double.tryParse(viajeActivo['pasajero_lon']?.toString() ?? "") ?? 0.0;
-            setState(() {
-              _viaje = viajeActivo;
-              if (esPrimeraVez) _estaCargando = false;
-              _obtenerRutaOSRM(cLat, cLon);
-            });
-          
-          if (cLat != 0.0 && _mapaListo) {
-            _mapController.move(latLng.LatLng(cLat, cLon), _mapController.camera.zoom);
+          setState(() {
+            _viaje = viajeActivo;
+            if (esPrimeraVez) _estaCargando = false;
             _obtenerRutaOSRM(cLat, cLon);
+          });
+          
+          if (cLat != 0.0) {
+            await _obtenerRutaOSRM(cLat, cLon);
+            if (_mapaListo && _puntosRuta.isNotEmpty) {
+            _mapController.fitCamera(
+              CameraFit.bounds(
+                bounds: LatLngBounds.fromPoints(_puntosRuta),
+                padding: const EdgeInsets.all(50),
+              ),
+            );
+          }
+            _mapController.move(latLng.LatLng(cLat, cLon), _mapController.camera.zoom);
           }
         }
       }
@@ -134,8 +160,10 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
         final List coords = data['routes'][0]['geometry']['coordinates'];
         setState(() {
           _puntosRuta = coords.map((c) => latLng.LatLng(c[1].toDouble(), c[0].toDouble())).toList();
+          _ultimaLatDestino = pLat;
         });
         print("🚀 RUTA TRAZADA: ${_puntosRuta.length} puntos encontrados");
+
       }
       else{
         print("❌ Error de OSRM: ${response.body}");
@@ -317,7 +345,7 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
                 children: [
                   const Icon(Icons.info_outline, size: 18),
                   const SizedBox(width: 8),
-                  const Text("Referencia", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("Recoger en:", style: TextStyle(fontWeight: FontWeight.bold)),
                   const Spacer(),
                   Icon(_referenciaExpandida ? Icons.expand_less : Icons.expand_more),
                 ],

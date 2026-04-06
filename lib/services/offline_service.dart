@@ -43,7 +43,7 @@ class OfflineService {
     for (var p in pendientes) {
       try {
         final response = await http.post(
-          Uri.parse('http://192.168.1.105:8000/api/usuarios/actualizar_ubicacion/'),
+          Uri.parse('http://3.21.34.42:8000/api/usuarios/actualizar_ubicacion/'),
           headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
           body: jsonEncode({'lat': p['lat'], 'lon': p['lon']}),
         );

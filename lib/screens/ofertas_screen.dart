@@ -1,3 +1,4 @@
+import 'dart:async'; // <--- Añade esto
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
@@ -5,6 +6,7 @@ import '../services/viaje_socket_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/push_notification_service.dart'; // Tu servicio de notificaciones
+
 
 class OfertasScreen extends StatefulWidget {
   const OfertasScreen({super.key});
@@ -18,6 +20,7 @@ class _OfertasScreenState extends State<OfertasScreen> {
   final _authService = AuthService();
   List<dynamic> _ofertas = [];
   bool _estaCargando = true;
+  StreamSubscription? _socketSubscription;
 
   @override
   void initState() {
@@ -26,11 +29,27 @@ class _OfertasScreenState extends State<OfertasScreen> {
     _configurarNotificacionesPush();
   }
 
+  @override
+  void dispose() {
+    _socketSubscription?.cancel(); // Limpiamos al cerrar la pantalla
+    super.dispose();
+  }
+
+  String formatImageUrl(String? url) {
+  if (url == null || url.isEmpty) return '';
+  
+  // Si la URL trae el puerto 8000, lo eliminamos para que pase por Nginx (puerto 80)
+  if (url.contains(':8000')) {
+    return url.replaceFirst(':8000', '');
+  }
+  
+  return url;
+}
+
   void _configurarNotificacionesPush() async{
     await PushNotificationService.initializeApp();
     // 1. Escuchar mensajes cuando la app está en primer plano
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print("🔔 Notificación recibida en primer plano: ${message.data['type']}");
       
       if (message.data['type'] == 'nueva_oferta') {
         // Refrescamos la lista de ofertas automáticamente
@@ -50,15 +69,17 @@ class _OfertasScreenState extends State<OfertasScreen> {
     });
   }
 
+  
   Future<void> _escucharOfertas() async {
     final prefs = await SharedPreferences.getInstance();
     final viajeId = prefs.getInt('current_viaje_id');
+    
     if (viajeId != null) {
       await _cargarOfertasIniciales();
 
-      _socketService.conectar(viajeId).listen((mensaje) {
+      // Guardamos la suscripción para evitar fugas de memoria
+      _socketSubscription = _socketService.conectar(viajeId).listen((mensaje) {
         final data = jsonDecode(mensaje);
-        //Si es escucha una nueva oferta o se cancela la oferta vuelve a cargar los viajes
         if (data['type'] == 'nueva_oferta' || data['type'] == 'oferta_cancelada') {
           _cargarOfertasIniciales();
         }
@@ -194,12 +215,12 @@ class _OfertasScreenState extends State<OfertasScreen> {
                   padding: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFF7931E), width: 2),
+                    border: Border.all(color: const Color.fromARGB(255, 233, 153, 62), width: 2),
                   ),
                   child: CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.grey[200],
-                    backgroundImage: NetworkImage(oferta['mototaxista_foto'] ?? 'https://via.placeholder.com/150'),
+                    backgroundImage: NetworkImage(formatImageUrl(oferta['mototaxista_foto']) ?? 'https://via.placeholder.com/150'),
                   ),
                 ),
                 const SizedBox(width: 15),

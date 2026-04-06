@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:kooneex_app/screens/esperando_confirmacion.dart';
+import 'screens/esperando_confirmacion.dart';
 import 'screens/login_screen.dart';
 import 'screens/viaje_screen.dart'; // La crearemos ahora
 import 'screens/solicitudes_screen.dart'; // La crearemos ahora
