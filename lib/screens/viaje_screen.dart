@@ -162,8 +162,17 @@ class _ViajeScreenState extends State<ViajeScreen> {
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text("Cerrar Sesión", style: TextStyle(color: Colors.red)),
-            onTap: () {
-              // Tu lógica de logout
+            onTap:  () async {
+              await _authService.logout();
+              if (!mounted) return;
+              Navigator.pushNamedAndRemoveUntil(
+                context, 
+                '/login', 
+                (route) => false,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Sesión cerrada correctamente")),
+              );
             },
           ),
           const SizedBox(height: 20),
