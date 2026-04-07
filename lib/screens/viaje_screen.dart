@@ -281,7 +281,7 @@ class _ViajeScreenState extends State<ViajeScreen> {
 
             _buildCustomInput(
               controller: _referenciaController,
-              label: "Referencia donde sera \nrecogido(Ej: Casa portón azul)",
+              label: "Referencia donde sera \nrecogido(Ej: Ciudad, Colonia, portón azul)",
               icon: Icons.notes,
               maxLines: 4,
             ),
