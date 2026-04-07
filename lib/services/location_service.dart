@@ -11,7 +11,7 @@ class LocationService {
   factory LocationService() => _instance;
   LocationService._internal();
 
-  final String _baseUrl = "http://192.168.1.105:8000/api";
+  final String _baseUrl = "http://3.21.34.42:8000/api";
   StreamSubscription<Position>? _positionStreamSubscription;
 
   // NUEVO: Controlador para notificar a la UI sobre cambios de posición

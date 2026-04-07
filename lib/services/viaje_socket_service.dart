@@ -8,7 +8,7 @@ class ViajeSocketService {
   int _reintentos = 2; // Segundos para el primer reintento
 
   // Quitamos el puerto :8000 para que pase por Nginx (puerto 80)
-  final String _wsBaseUrl = "ws://192.168.1.105:8000/ws/viaje";
+  final String _wsBaseUrl = "ws://3.21.34.42:8000/ws/viaje";
 
   Stream<dynamic> conectar(int viajeId) {
     if (_estaConectado) return _controller.stream;
