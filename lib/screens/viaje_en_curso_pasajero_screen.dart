@@ -17,9 +17,9 @@ class ViajeEnCursoPasajeroScreen extends StatefulWidget {
 }
 
 class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen> {
-  final String _baseUrl = "http://192.168.1.105:8000/api";
+  final String _baseUrl = "http://3.21.34.42:8000/api";
   final MapController _mapController = MapController();
-  final _viajeSocket = ViajeSocketService(); // Instancia del socket
+  final _viajeSocket = ViajeSocketService(); 
   
   Map<String, dynamic>? _viaje;
   bool _estaCargando = true;
@@ -37,7 +37,6 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
     _cargarViajeActual(esPrimeraVez: true);
     _configurarSockets();
 
-    // Refresco más rápido para el pasajero (cada 10 seg) para ver el movimiento del moto
     _timerRefresco = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (_estaOnline) _cargarViajeActual(esPrimeraVez: false);
     });
@@ -48,22 +47,17 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
     final viajeId = prefs.getInt('current_viaje_id');
 
     if (viajeId != null) {
-      print("📡 Conectando socket de seguimiento para viaje: $viajeId");
-      
       _viajeSocket.conectar(viajeId).listen((mensaje) {
         final data = jsonDecode(mensaje);
-        print("📩 Evento recibido en Pasajero: ${data['type']}");
-
-        // Escuchamos el evento de finalización
         if (data['type'] == 'viaje_completado') {
           _finalizarFlujoViaje();
         }
-
-        // Opcional: Si el mototaxista actualiza su posición por socket en lugar de HTTP
         if (data['type'] == 'posicion_actualizada') {
           setState(() {
             _viaje!['conductor_lat'] = data['lat'];
             _viaje!['conductor_lon'] = data['lon'];
+            // Actualizamos la ruta con la nueva posición del conductor
+            _obtenerRutaOSRM(data['lat'], data['lon']);
           });
         }
       });
@@ -72,25 +66,15 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
 
   void _finalizarFlujoViaje() {
     if (mounted) {
-      // Limpiamos el ID del viaje actual de las preferencias
       SharedPreferences.getInstance().then((prefs) {
         prefs.remove('current_viaje_id');
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("¡Has llegado a tu destino!"),
-          backgroundColor: Colors.green,
-        ),
+        const SnackBar(content: Text("¡Has llegado a tu destino!"), backgroundColor: Colors.green),
       );
-
-      // Redirigimos a la pantalla que desees (ej: un resumen o el home)
-      // Si quieres enviarlo a una pantalla de calificación podrías usar '/resumen_viaje'
       Navigator.pushNamedAndRemoveUntil(context, '/viaje', (route) => false);
     }
   }
-
-
 
   void _monitorearInternet() {
     _internetSubscription = Connectivity().onConnectivityChanged.listen((result) {
@@ -121,25 +105,20 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
 
       if (response.statusCode == 200) {
         List viajes = jsonDecode(response.body);
-        final viajeActivo = viajes.firstWhere(
-          (v) => v["estado"] == "en_curso",
-          orElse: () => null,
-        );
+        final viajeActivo = viajes.firstWhere((v) => v["estado"] == "en_curso", orElse: () => null);
 
         if (viajeActivo != null) {
           setState(() {
             _viaje = viajeActivo;
-            if (esPrimeraVez) _estaCargando = false;
-          });
-          
-          double cLat = double.tryParse(_viaje!['conductor_lat']?.toString() ?? "0") ?? 0.0;
-          double cLon = double.tryParse(_viaje!['conductor_lon']?.toString() ?? "0") ?? 0.0;
+            
+            double cLat = double.tryParse(viajeActivo['conductor_lat']?.toString() ?? "0") ?? 0.0;
+            double cLon = double.tryParse(viajeActivo['conductor_lon']?.toString() ?? "0") ?? 0.0;
 
-          if (cLat != 0.0 && _mapaListo) {
-            _obtenerRutaOSRM(cLat, cLon);
-          }
+            if (cLat != 0.0) {
+              _obtenerRutaOSRM(cLat, cLon);
+            }
+          });
         } else {
-          // Si ya no hay viaje en curso, regresamos al inicio
           if (mounted) Navigator.pushReplacementNamed(context, '/viaje');
         }
       }
@@ -151,27 +130,39 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
   }
 
   Future<void> _obtenerRutaOSRM(double cLat, double cLon) async {
+    if (!_estaOnline || _viaje == null) return;
+
     double pLat = double.tryParse(_viaje!['pasajero_lat']?.toString() ?? "0") ?? 0.0;
     double pLon = double.tryParse(_viaje!['pasajero_lon']?.toString() ?? "0") ?? 0.0;
 
-    final url = "https://router.project-osrm.org/route/v1/driving/$cLon,$cLat;$pLon,$pLat?overview=simplified&geometries=geojson";
+    if (pLat == 0.0) return;
+
+    // Feedback instantáneo: Línea recta mientras carga la ruta real
+    if (_puntosRuta.isEmpty) {
+      setState(() {
+        _puntosRuta = [latLng.LatLng(cLat, cLon), latLng.LatLng(pLat, pLon)];
+      });
+    }
+
+    final url = "https://router.project-osrm.org/route/v1/driving/$cLon,$cLat;$pLon,$pLat?overview=full&geometries=geojson&steps=false";
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List coords = data['routes'][0]['geometry']['coordinates'];
-        setState(() {
-          _puntosRuta = coords.map((c) => latLng.LatLng(c[1].toDouble(), c[0].toDouble())).toList();
-        });
+        if (mounted) {
+          setState(() {
+            _puntosRuta = coords.map((c) => latLng.LatLng(c[1].toDouble(), c[0].toDouble())).toList();
+          });
+        }
       }
     } catch (e) {
-      debugPrint("Error ruta OSRM: $e");
+      debugPrint("Error ruta OSRM Pasajero: $e");
     }
   }
 
-  // --- ACCIONES DEL PASAJERO ---
   void _llamarConductor() async {
-    final tel = _viaje?['conductor_telefono']; // Asegúrate que Django envíe esto
+    final tel = _viaje?['conductor_telefono']; 
     if (tel == null) return;
     final url = Uri.parse("tel:$tel");
     if (await canLaunchUrl(url)) await launchUrl(url);
@@ -181,7 +172,6 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
   Widget build(BuildContext context) {
     if (_estaCargando) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
-    // Coordenadas actuales
     double cLat = double.tryParse(_viaje?['conductor_lat']?.toString() ?? "20.1373") ?? 20.1373;
     double cLon = double.tryParse(_viaje?['conductor_lon']?.toString() ?? "-90.1749") ?? -90.1749;
     double pLat = double.tryParse(_viaje?['pasajero_lat']?.toString() ?? "20.1373") ?? 20.1373;
@@ -210,7 +200,6 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
                 ),
               MarkerLayer(
                 markers: [
-                  // Mototaxista (El que se mueve)
                   Marker(
                     point: latLng.LatLng(cLat, cLon),
                     width: 60, height: 60,
@@ -225,7 +214,6 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
                       ],
                     ),
                   ),
-                  // Pasajero (Tú)
                   Marker(
                     point: latLng.LatLng(pLat, pLon),
                     child: const Icon(Icons.person_pin_circle, color: Colors.blue, size: 45),
@@ -234,8 +222,6 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
               ),
             ],
           ),
-
-          // PANEL DE INFORMACIÓN DEL CONDUCTOR
           SafeArea(
             child: Column(
               children: [
@@ -261,8 +247,7 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text("TU MOTOTAXISTA ESTÁ EN CAMINO", 
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
+              const Text("TU MOTOTAXISTA ESTÁ EN CAMINO", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange)),
               const SizedBox(height: 10),
               ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -271,8 +256,7 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
                   backgroundColor: Color(0xFFF7931E),
                   child: Icon(Icons.person, color: Colors.white, size: 30),
                 ),
-                title: Text(_viaje?['mototaxista_nombre'] ?? "Conductor", 
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                title: Text(_viaje?['mototaxista_nombre'] ?? "Conductor", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                 trailing: IconButton(
                   icon: const Icon(Icons.phone, color: Colors.green, size: 30),
                   onPressed: _llamarConductor,
@@ -317,13 +301,9 @@ class _ViajeEnCursoPasajeroScreenState extends State<ViajeEnCursoPasajeroScreen>
       child: const Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(
-            width: 20, height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF7931E)),
-          ),
+          SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFF7931E))),
           SizedBox(width: 15),
-          Text("ESPERANDO TU LLEGADA AL DESTINO", 
-            style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+          Text("ESPERANDO TU LLEGADA AL DESTINO", style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
         ],
       ),
     );
