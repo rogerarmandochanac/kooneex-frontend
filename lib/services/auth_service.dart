@@ -6,7 +6,7 @@ import '../models/destino.dart';
 
 class AuthService {
   // Cambia esta URL por la de tu servidor Django
-  final String _baseUrl = "http://192.168.1.105:8000/api"; 
+  final String _baseUrl = "http://3.21.34.42:8000/api"; 
 
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
