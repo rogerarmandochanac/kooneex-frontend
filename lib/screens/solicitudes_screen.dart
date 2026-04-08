@@ -230,26 +230,72 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
               Text("📍 ${viaje['referencia']}", style: const TextStyle(fontStyle: FontStyle.italic)),
             const SizedBox(height: 15),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end, // Alinea la base del input con el botón
               children: [
                 Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: tarifaController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(prefixText: "\$ ", labelText: "Tu Oferta"),
+                  flex: 3,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100], // Fondo sutil para el campo
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: TextField(
+                      controller: tarifaController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 20, // Aumentado para mejor legibilidad del conductor
+                        color: Colors.black87
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        labelText: "Tu Oferta",
+                        labelStyle: TextStyle(color: Colors.grey, fontSize: 14),
+                        prefixText: "\$ ",
+                        prefixStyle: TextStyle(
+                          color: Color(0xFFF7931E), 
+                          fontWeight: FontWeight.bold, 
+                          fontSize: 20
+                        ),
+                        floatingLabelBehavior: FloatingLabelBehavior.auto,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 15),
+                const SizedBox(width: 12),
                 Expanded(
                   flex: 3,
-                  child: ElevatedButton(
-                    onPressed: () => _enviarOferta(viaje['id'], tarifaController.text),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF7931E)),
-                    child: const Text("ENVIAR OFERTA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: SizedBox(
+                    height: 56, // Altura estándar para botones táctiles cómodos
+                    child: ElevatedButton(
+                      onPressed: () => _enviarOferta(viaje['id'], tarifaController.text),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF7931E),
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shadowColor: const Color(0xFFF7931E).withOpacity(0.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "ENVIAR OFERTA",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900, 
+                          fontSize: 13, 
+                          letterSpacing: 0.5,
+                          height: 1.1 // Ajuste de línea para el texto doble
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
-            ),
+            )
           ],
         ),
       ),

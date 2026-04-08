@@ -88,6 +88,7 @@ class _ViajeScreenState extends State<ViajeScreen> {
     }
   }
 
+
   void _abrirSeleccionDestino() {
     showModalBottomSheet(
       context: context,
