@@ -70,6 +70,17 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
     }
   }
 
+    String formatImageUrl(String? url) {
+      if (url == null || url.isEmpty) return '';
+      
+      // Si la URL trae el puerto 8000, lo eliminamos para que pase por Nginx (puerto 80)
+      if (url.contains(':8000')) {
+        return url.replaceFirst(':8000', '');
+      }
+      
+      return url;
+    }
+
   // --- INTERFAZ: DRAWER (SIN FOTO DE PERFIL) ---
 
   Widget _buildDrawer() {
@@ -86,7 +97,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
             ),
             accountName: Text("Conductor Kooneex", 
               style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            accountEmail: Text("Panel de Solicitudes", 
+            accountEmail: Text("Ver perfil", 
               style: TextStyle(color: Colors.grey)),
           ),
           ListTile(
@@ -199,7 +210,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen> {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.grey[100],
-                  child: const Icon(Icons.person, color: Colors.grey),
+                  backgroundImage: NetworkImage(formatImageUrl(viaje['pasajero_foto']) ?? 'https://via.placeholder.com/150'),
                 ),
                 const SizedBox(width: 15),
                 Expanded(
