@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/destino.dart';
@@ -14,25 +15,47 @@ class AuthService {
         Uri.parse('$_baseUrl/token/'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
-      );
+      ).timeout(const Duration(seconds: 10)); // Evita que se quede cargando infinitamente
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final prefs = await SharedPreferences.getInstance();
+        
+        // Limpieza de estado previo y guardado de token
         await prefs.remove('current_viaje_id');
         await prefs.setString('access_token', data['access']);
+        
         return {'success': true, 'token': data['access']};
-      } else {
-        return {'success': false, 'message': 'Credenciales incorrectas'};
+      } 
+      else if (response.statusCode == 401) {
+        return {'success': false, 'message': 'Usuario o contraseña incorrectos.'};
       }
+      else {
+        // Manejo de errores específicos del backend si existen
+        final errorData = jsonDecode(response.body);
+        return {'success': false, 'message': errorData['detail'] ?? 'Error en el servidor (${response.statusCode})'};
+      }
+
+    } on SocketException {
+      // Este intercepta específicamente el "Connection failed / Network is unreachable"
+      return {
+        'success': false, 
+        'message': 'No hay conexión a internet. Revisa tus datos o Wi-Fi.'
+      };
+    } on TimeoutException {
+      return {
+        'success': false, 
+        'message': 'El servidor está tardando demasiado en responder.'
+      };
     } catch (e) {
-      return {'success': false, 'message': 'Error de conexión: $e'};
+      // Error genérico para cualquier otra cosa
+      return {
+        'success': false, 
+        'message': 'Error inesperado: Inténtalo más tarde.'
+      };
     }
   }
 
-
-
-  // ESTA ES LA FUNCIÓN QUE FALTA O ESTÁ MAL DEFINIDA
   Future<Map<String, dynamic>> register({
     required String username,
     required String password,
@@ -41,38 +64,61 @@ class AuthService {
     required String lastName,
     required String telefono,
     required String rol,
-    required File foto, // Importante para tu lógica de registro.py 
-  }) async {
-    try {
-      // Usamos MultipartRequest para enviar la imagen igual que en tu código Kivy 
-      var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/usuarios/registro/'));
-      
-      request.fields.addAll({
-        'username': username,
-        'password': password,
-        'email': email,
-        'first_name': firstName,
-        'last_name': lastName,
-        'telefono': telefono,
-        'rol': rol,
-      });
+    required File foto,
+    }) async {
+      try {
+        var request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/usuarios/registro/'));
+        
+        request.fields.addAll({
+          'username': username,
+          'password': password,
+          'email': email,
+          'first_name': firstName,
+          'last_name': lastName,
+          'telefono': telefono,
+          'rol': rol,
+        });
 
-      // Adjuntamos la foto tomada desde la cámara
-      request.files.add(await http.MultipartFile.fromPath('foto', foto.path));
+        // Adjuntamos la foto
+        request.files.add(await http.MultipartFile.fromPath('foto', foto.path));
 
-      var streamedResponse = await request.send();
-      var response = await http.Response.fromStream(streamedResponse);
+        // Enviamos y aplicamos un timeout de 20 segundos (las fotos pesan más que un login)
+        var streamedResponse = await request.send().timeout(const Duration(seconds: 20));
+        var response = await http.Response.fromStream(streamedResponse);
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return {'success': true};
-      } else {
-        final errorData = jsonDecode(response.body);
-        return {'success': false, 'message': errorData['error'] ?? 'Error al crear usuario'};
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          return {'success': true};
+        } else {
+          final errorData = jsonDecode(response.body);
+          return {
+            'success': false, 
+            'message': errorData['error'] ?? errorData['detail'] ?? 'Error al crear usuario'
+          };
+        }
+      } on SocketException {
+        // Captura el error de red inalcanzable o falta de conexión
+        return {
+          'success': false, 
+          'message': 'No se pudo establecer conexión. Revisa tu internet o los datos móviles.'
+        };
+      } on TimeoutException {
+        return {
+          'success': false, 
+          'message': 'La carga de la foto está tardando demasiado. Intenta con una conexión más estable.'
+        };
+      } on HttpException {
+        return {
+          'success': false, 
+          'message': 'Error de comunicación con el servidor.'
+        };
+      } catch (e) {
+        // Captura cualquier otro error, pero ya filtraste los de red más comunes
+        return {
+          'success': false, 
+          'message': 'Ocurrió un error inesperado al intentar registrarte.'
+        };
       }
-    } catch (e) {
-      return {'success': false, 'message': 'Error de conexión: $e'};
     }
-  }
 
   Future<String?> getUsuarioRol(String token) async {
     try {

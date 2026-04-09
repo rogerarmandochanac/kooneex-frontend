@@ -114,7 +114,6 @@ class _ViajeScreenState extends State<ViajeScreen> {
                     _destinoLon = destino.longitud;
                   });
                   Navigator.of(context).pop();
-                  Navigator.of(context).pushNamed('/cambiar-password');
                 },
               );
             },
