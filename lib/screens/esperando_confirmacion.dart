@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,23 +10,28 @@ class EsperandoConfirmacionScreen extends StatefulWidget {
   const EsperandoConfirmacionScreen({super.key});
 
   @override
-  State<EsperandoConfirmacionScreen> createState() => _EsperandoConfirmacionScreenState();
+  State<EsperandoConfirmacionScreen> createState() =>
+      _EsperandoConfirmacionScreenState();
 }
 
-class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScreen> with SingleTickerProviderStateMixin {
+class _EsperandoConfirmacionScreenState
+    extends State<EsperandoConfirmacionScreen>
+    with SingleTickerProviderStateMixin {
   final _viajeSocket = ViajeSocketService();
   final _motoSocket = MototaxiSocketService();
   final _authService = AuthService();
-  
+  StreamSubscription? _socketSubscription;
+
   bool _cancelando = false;
-  int? _viajeId; // Variable local para evitar leer SharedPreferences múltiples veces
+  int?
+      _viajeId; // Variable local para evitar leer SharedPreferences múltiples veces
   late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
     _iniciarConexiones();
-    
+
     _controller = AnimationController(
       vsync: this,
       lowerBound: 0.5,
@@ -48,20 +54,24 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
 
         if (data['type'] == 'oferta_aceptada') {
           // Navegar a la pantalla de éxito (asegúrate que el nombre coincida en main.dart)
-          if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/aceptar_viaje', (route) => false);
+          if (mounted)
+            Navigator.pushNamedAndRemoveUntil(
+                context, '/aceptar_viaje', (route) => false);
         }
-        
+
         if (data['type'] == 'viaje_cancelado') {
           _finalizarYSalir("El pasajero canceló el viaje.");
         }
       }, onError: (err) => print("Error en WS Viaje: $err"));
 
       // 2. Canal general de mototaxi
-      _motoSocket.conectar().listen((mensaje) {
+      _motoSocket.conectar(); // Se asegura de que esté abierto
+
+      // Escuchamos el flujo persistente del servicio
+      _socketSubscription = _motoSocket.stream.listen((mensaje) {
         final data = jsonDecode(mensaje);
-        // Comparación segura convirtiendo ambos a String
-        if (data['type'] == 'cancelar_viaje') {
-          _finalizarYSalir("Este viaje ya no está disponible.");
+        if (data['type'] == 'nuevo_viaje' || data['type'] == 'cancelar_viaje') {
+          _finalizarYSalir("Este viaje ya no esta disponible");
         }
       });
     } else {
@@ -72,8 +82,10 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
 
   void _finalizarYSalir(String mensaje) {
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensaje)));
-      Navigator.pushNamedAndRemoveUntil(context, '/solicitudes', (route) => false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(mensaje)));
+      Navigator.pushNamedAndRemoveUntil(
+          context, '/solicitudes', (route) => false);
     }
   }
 
@@ -83,10 +95,11 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
     setState(() => _cancelando = true);
     // Asegúrate que tu authService.cancelarOfertaPropia() use el ID local o lo busque bien
     final exito = await _authService.cancelarOfertaPropia();
-  
+
     if (mounted) {
       if (exito) {
-        Navigator.pushNamedAndRemoveUntil(context, '/solicitudes', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(
+            context, '/solicitudes', (route) => false);
       } else {
         setState(() => _cancelando = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -128,7 +141,8 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
                         color: Color(0xFFF7931E),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.moped, color: Colors.white, size: 40),
+                      child: const Icon(Icons.moped,
+                          color: Colors.white, size: 40),
                     ),
                   ],
                 ),
@@ -142,7 +156,8 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
               Text(
                 "El pasajero está revisando tu propuesta.\nMantente atento.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600], fontSize: 15, height: 1.4),
+                style: TextStyle(
+                    color: Colors.grey[600], fontSize: 15, height: 1.4),
               ),
               const SizedBox(height: 50),
               if (!_cancelando)
@@ -150,7 +165,8 @@ class _EsperandoConfirmacionScreenState extends State<EsperandoConfirmacionScree
                   onPressed: _viajeId == null ? null : _retirarOferta,
                   child: const Text(
                     "RETIRAR MI OFERTA",
-                    style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        color: Colors.redAccent, fontWeight: FontWeight.bold),
                   ),
                 )
               else

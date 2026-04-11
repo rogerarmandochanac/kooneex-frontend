@@ -31,4 +31,25 @@ class UIUtils {
       ),
     );
   }
+
+  static void showSnackBar(BuildContext context, String msg,
+      {bool isError = false}) {
+    // Limpiamos snacks anteriores por si el usuario presiona muchas veces
+    ScaffoldMessenger.of(context).removeCurrentSnackBar();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          msg,
+          style: const TextStyle(fontFamily: 'Poppins', color: Colors.white),
+        ),
+        backgroundColor:
+            isError ? Colors.red : const Color(0xFFF7931E), // Usamos tu naranja
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior
+            .floating, // Hace que el snackbar "flote" sobre la UI
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
 }
