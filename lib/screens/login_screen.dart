@@ -3,6 +3,7 @@ import '../services/auth_service.dart';
 import '../screens/register_screen.dart';
 import '../services/location_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/ui_utils.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isObscure = true;
 
   void _handleLogin() async {
-    _showLoading(); // Muestra el spinner de carga
+    UIUtils.showLoading(context); // Muestra el spinner de carga
 
     final result = await _authService.login(
       _usernameController.text,
@@ -41,7 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final estadoViaje = await _authService.verificarEstadoViaje();
       final prefs = await SharedPreferences.getInstance();
       
-      Navigator.pop(context); // Quitamos el spinner
+      UIUtils.dismissLoading(context);// Quitamos el spinner
       // 🔥 GUARDAR EL ID DEL VIAJE SI EXISTE
       // Asumiendo que el backend lo envía como estadoViaje['viaje_id']
       if (estadoViaje['viaje_id'] != null) {
@@ -74,8 +75,8 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       }
     } else {
-      Navigator.pop(context); // Quitar spinner
-      setState(() { _mensaje = result['message']; });
+      UIUtils.dismissLoading(context);
+      UIUtils.showError(context, result['message']); // Quitar spinner
     }
   }
   
@@ -164,29 +165,6 @@ class _LoginScreenState extends State<LoginScreen> {
           elevation: 0,
         ),
         child: Text(text, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  // Método para mostrar el círculo de carga (Spinner)
-  void _showLoading() {
-    showDialog(
-      context: context,
-      barrierDismissible: false, // Evita que se cierre tocando fuera
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
-          color: Colors.white, // O el color que prefieras
-        ),
-      ),
-    );
-  }
-
-  // Método para mostrar errores (Snackbar)
-  void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Colors.red,
       ),
     );
   }
