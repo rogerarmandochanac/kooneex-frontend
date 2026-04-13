@@ -14,10 +14,8 @@ class PushNotificationService {
       badge: true,
       sound: true,
     );
-
     // 2. Obtener el Token del dispositivo
     token = await messaging.getToken();
-    print("FCM TOKEN: $token");
 
     // 3. Enviar el token a Django (Si el usuario ya está logueado)
     if (token != null) {
@@ -28,12 +26,12 @@ class PushNotificationService {
   static Future _actualizarTokenEnServidor(String token) async {
     final prefs = await SharedPreferences.getInstance();
     final authToken = prefs.getString('access_token');
-    
+
     if (authToken == null) return;
 
     // Tu endpoint en Django para guardar el token del mototaxista
     await http.post(
-      Uri.parse('http://3.21.34.42:8000/api/usuarios/guardar_token/'),
+      Uri.parse('http://3.21.34.42/api/usuarios/guardar_token/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $authToken',
@@ -42,5 +40,13 @@ class PushNotificationService {
         'fcm_token': token,
       }),
     );
+  }
+
+  // En push_notification_service.dart
+  static Future<void> registrarTokenEnServidor() async {
+    token = await messaging.getToken(); // Aseguramos tener el token
+    if (token != null) {
+      await _actualizarTokenEnServidor(token!);
+    }
   }
 }

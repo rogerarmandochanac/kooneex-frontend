@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
+import '../services/push_notification_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -30,7 +31,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// Captura de foto optimizada
   Future<void> _takePhoto() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+    final pickedFile =
+        await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
 
     if (pickedFile != null) {
       setState(() => _imageFile = File(pickedFile.path));
@@ -38,12 +40,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _handleRegister() async {
-    // 1. Validaciones de formulario (Campos vacíos, formatos, etc.)
     if (!_formKey.currentState!.validate()) return;
-
-    // 2. Validación manual de la foto
     if (_imageFile == null) {
-      _showSnackBar("Por favor, tómate una foto para continuar.", isError: true);
+      _showSnackBar("La foto es obligatoria", isError: true);
       return;
     }
 
@@ -60,13 +59,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
       foto: _imageFile!,
     );
 
-    if (mounted) Navigator.pop(context); // Quitar spinner
+    if (mounted) Navigator.pop(context); // Cierra el loading
 
     if (result['success']) {
-      _showSnackBar("Cuenta creada con éxito", isError: false);
-      if (mounted) Navigator.pop(context);
+      // 1. Iniciar sesión automáticamente para obtener el token JWT
+      final loginResult = await _authService.login(
+        _userController.text.trim(),
+        _passController.text,
+      );
+
+      if (loginResult['success']) {
+        // 2. Guardar el token de notificaciones push en Django
+        await PushNotificationService.registrarTokenEnServidor();
+
+        // 3. Evaluar el rol y redirigir (Igual que en Login)
+        if (_selectedRol == 'mototaxista') {
+          if (!mounted) return;
+          Navigator.pushNamedAndRemoveUntil(
+              context, '/solicitudes', (route) => false);
+        } else {
+          if (!mounted) return;
+          Navigator.pushNamedAndRemoveUntil(
+              context, '/viaje', (route) => false);
+        }
+      } else {
+        // Si el login falla por alguna razón, enviamos al login normal
+        _showSnackBar("Cuenta creada. Por favor, inicia sesión.",
+            isError: false);
+        if (!mounted) return;
+        Navigator.pop(context);
+      }
     } else {
-      _showSnackBar(result['message'], isError: true);
+      _showSnackBar(result['message'] ?? "Error al registrarte", isError: true);
     }
   }
 
@@ -77,7 +101,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Registro", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Registro",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
@@ -95,10 +120,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: CircleAvatar(
                     radius: 55,
                     backgroundColor: Colors.grey[100],
-                    backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,
-                    child: _imageFile == null 
-                      ? const Icon(Icons.add_a_photo, size: 40, color: brandColor) 
-                      : null,
+                    backgroundImage:
+                        _imageFile != null ? FileImage(_imageFile!) : null,
+                    child: _imageFile == null
+                        ? const Icon(Icons.add_a_photo,
+                            size: 40, color: brandColor)
+                        : null,
                   ),
                 ),
               ),
@@ -107,15 +134,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // Inputs de Texto
               _buildField(_userController, "Usuario", Icons.account_circle),
               _buildField(_nameController, "Nombre", Icons.person),
-              _buildField(_lastNameController, "Apellido", Icons.person_outline),
-              _buildField(_emailController, "Correo", Icons.email, type: TextInputType.emailAddress),
-              _buildField(_phoneController, "Teléfono", Icons.phone, type: TextInputType.phone),
+              _buildField(
+                  _lastNameController, "Apellido", Icons.person_outline),
+              _buildField(_emailController, "Correo", Icons.email,
+                  type: TextInputType.emailAddress),
+              _buildField(_phoneController, "Teléfono", Icons.phone,
+                  type: TextInputType.phone),
 
               // Campo Contraseña
               _buildField(
-                _passController, 
-                "Contraseña", 
-                Icons.lock_outline, 
+                _passController,
+                "Contraseña",
+                Icons.lock_outline,
                 obscure: _isObscure,
                 isPassword: true,
               ),
@@ -128,22 +158,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscure: _isObscure,
                 isPassword: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return "Confirma tu contraseña";
-                  if (value != _passController.text) return "Las contraseñas no coinciden";
+                  if (value == null || value.isEmpty)
+                    return "Confirma tu contraseña";
+                  if (value != _passController.text)
+                    return "Las contraseñas no coinciden";
                   return null;
                 },
               ),
 
               const SizedBox(height: 15),
-              const Text("¿Cuál será tu rol?", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text("¿Cuál será tu rol?",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 15),
 
               // Selector de Rol Mejorado (Tarjetas visuales)
               Row(
                 children: [
-                  Expanded(child: _roleCard('pasajero', 'Soy Pasajero', Icons.directions_walk, brandColor)),
+                  Expanded(
+                      child: _roleCard('pasajero', 'Soy Pasajero',
+                          Icons.directions_walk, brandColor)),
                   const SizedBox(width: 15),
-                  Expanded(child: _roleCard('mototaxista', 'Soy Conductor', Icons.motorcycle, brandColor)),
+                  Expanded(
+                      child: _roleCard('mototaxista', 'Soy Conductor',
+                          Icons.motorcycle, brandColor)),
                 ],
               ),
 
@@ -154,9 +191,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: brandColor,
                   minimumSize: const Size(double.infinity, 55),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text("FINALIZAR REGISTRO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                child: const Text("FINALIZAR REGISTRO",
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 20),
             ],
@@ -167,7 +207,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   /// Tarjeta de selección de rol con feedback visual claro
-  Widget _roleCard(String role, String label, IconData icon, Color activeColor) {
+  Widget _roleCard(
+      String role, String label, IconData icon, Color activeColor) {
     bool isSelected = _selectedRol == role;
     return GestureDetector(
       onTap: () => setState(() => _selectedRol = role),
@@ -177,14 +218,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
         decoration: BoxDecoration(
           color: isSelected ? activeColor : Colors.white,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: isSelected ? activeColor : Colors.grey[300]!, width: 2),
-          boxShadow: isSelected ? [BoxShadow(color: activeColor.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : [],
+          border: Border.all(
+              color: isSelected ? activeColor : Colors.grey[300]!, width: 2),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                      color: activeColor.withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4))
+                ]
+              : [],
         ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: isSelected ? Colors.white : Colors.grey),
+            Icon(icon,
+                size: 32, color: isSelected ? Colors.white : Colors.grey),
             const SizedBox(height: 8),
-            Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.grey[600], fontWeight: FontWeight.bold)),
+            Text(label,
+                style: TextStyle(
+                    color: isSelected ? Colors.white : Colors.grey[600],
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -193,25 +246,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   /// Generador de inputs estilizados
   Widget _buildField(
-    TextEditingController controller, 
-    String label, 
-    IconData icon, 
-    {bool obscure = false, bool isPassword = false, TextInputType type = TextInputType.text, String? Function(String?)? validator}
-  ) {
+      TextEditingController controller, String label, IconData icon,
+      {bool obscure = false,
+      bool isPassword = false,
+      TextInputType type = TextInputType.text,
+      String? Function(String?)? validator}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,
         obscureText: obscure,
         keyboardType: type,
-        validator: validator ?? (value) => value!.isEmpty ? "Campo obligatorio" : null,
+        validator:
+            validator ?? (value) => value!.isEmpty ? "Campo obligatorio" : null,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon, color: const Color(0xFFF7931E)),
-          suffixIcon: isPassword ? IconButton(
-            icon: Icon(_isObscure ? Icons.visibility : Icons.visibility_off),
-            onPressed: () => setState(() => _isObscure = !_isObscure),
-          ) : null,
+          suffixIcon: isPassword
+              ? IconButton(
+                  icon: Icon(
+                      _isObscure ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => _isObscure = !_isObscure),
+                )
+              : null,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
@@ -230,7 +287,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFFF7931E))),
+      builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFFF7931E))),
     );
   }
 }

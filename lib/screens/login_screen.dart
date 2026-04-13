@@ -4,6 +4,7 @@ import '../screens/register_screen.dart';
 import '../services/location_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/ui_utils.dart';
+import '../services/push_notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,7 +12,6 @@ class LoginScreen extends StatefulWidget {
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
-
 
 class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
@@ -29,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (result['success']) {
+      await PushNotificationService.registrarTokenEnServidor();
       // 1. Obtenemos el rol del usuario (igual que en login.py)
       String? rol = await _authService.getUsuarioRol(result['token']);
 
@@ -37,12 +38,12 @@ class _LoginScreenState extends State<LoginScreen> {
       LocationService().iniciarRastreo().catchError((e) {
         debugPrint("Error al activar GPS: $e");
       });
-      
+
       // 2. Verificamos el estado del viaje en el backend
       final estadoViaje = await _authService.verificarEstadoViaje();
       final prefs = await SharedPreferences.getInstance();
-      
-      UIUtils.dismissLoading(context);// Quitamos el spinner
+      if (!mounted) return;
+      UIUtils.dismissLoading(context); // Quitamos el spinner
       // 🔥 GUARDAR EL ID DEL VIAJE SI EXISTE
       // Asumiendo que el backend lo envía como estadoViaje['viaje_id']
       if (estadoViaje['viaje_id'] != null) {
@@ -51,8 +52,9 @@ class _LoginScreenState extends State<LoginScreen> {
         // Si no hay viaje activo, es vital limpiar cualquier ID viejo
         await prefs.remove('current_viaje_id'); //
       }
-      // 3. Lógica de redirección basada en tu código Kivy 
+      // 3. Lógica de redirección basada en tu código Kivy
       if (rol == "pasajero") {
+        if (!mounted) return;
         if (estadoViaje['mensaje'] == "tiene_viaje_activo") {
           Navigator.pushReplacementNamed(context, '/viaje_en_curso_pasajero');
         } else if (estadoViaje['mensaje'] == "tiene_viaje_pendiente") {
@@ -60,26 +62,25 @@ class _LoginScreenState extends State<LoginScreen> {
         } else {
           Navigator.pushReplacementNamed(context, '/viaje');
         }
-      } 
-      else if (rol == "mototaxista") {
+      } else if (rol == "mototaxista") {
+        if (!mounted) return;
         if (estadoViaje['mensaje'] == "tiene_viaje_aceptado") {
           Navigator.pushReplacementNamed(context, '/aceptar_viaje');
         } else if (estadoViaje['mensaje'] == "tiene_viaje_en_curso") {
           Navigator.pushReplacementNamed(context, '/viaje_en_curso');
-        } else if(estadoViaje['mensaje'] == "tiene_viaje_ofertado"){
+        } else if (estadoViaje['mensaje'] == "tiene_viaje_ofertado") {
           Navigator.pushReplacementNamed(context, '/esperando_confirmacion');
-        }
-        
-        else {
+        } else {
           Navigator.pushReplacementNamed(context, '/solicitudes');
         }
       }
     } else {
+      if (!mounted) return;
       UIUtils.dismissLoading(context);
-      UIUtils.showError(context, result['message']); // Quitar spinner
+      UIUtils.showError(context, result['message']);
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,23 +114,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextField(
                   controller: _passwordController,
                   obscureText: _isObscure,
-                  decoration: _inputDecoration("Contraseña", Icons.lock).copyWith(
+                  decoration:
+                      _inputDecoration("Contraseña", Icons.lock).copyWith(
                     suffixIcon: IconButton(
-                      icon: Icon(_isObscure ? Icons.visibility_off : Icons.visibility, color: Colors.white),
+                      icon: Icon(
+                          _isObscure ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.white),
                       onPressed: () => setState(() => _isObscure = !_isObscure),
                     ),
                   ),
                 ),
                 const SizedBox(height: 25),
                 // Botón Ingresar
-                _buildButton("Ingresar", Colors.white, const Color(0xFFF7931E), _handleLogin),
+                _buildButton("Ingresar", Colors.white, const Color(0xFFF7931E),
+                    _handleLogin),
                 const SizedBox(height: 15),
                 // Botón Registro
-                _buildButton("Crear Cuenta", Colors.transparent, Colors.white, () {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const RegisterScreen()));
+                _buildButton("Crear Cuenta", Colors.transparent, Colors.white,
+                    () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const RegisterScreen()));
                 }, outline: true),
                 const SizedBox(height: 30),
-                Text(_mensaje, style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                Text(_mensaje,
+                    style: const TextStyle(
+                        color: Colors.white, fontFamily: 'Poppins')),
               ],
             ),
           ),
@@ -144,12 +155,15 @@ class _LoginScreenState extends State<LoginScreen> {
       hintStyle: const TextStyle(color: Colors.white70),
       prefixIcon: Icon(icon, color: Colors.white),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.25),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
+      fillColor: Colors.white.withValues(alpha: .25),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(25), borderSide: BorderSide.none),
     );
   }
 
-  Widget _buildButton(String text, Color bg, Color textColor, VoidCallback onPressed, {bool outline = false}) {
+  Widget _buildButton(
+      String text, Color bg, Color textColor, VoidCallback onPressed,
+      {bool outline = false}) {
     return SizedBox(
       width: double.infinity,
       height: 45,
@@ -160,13 +174,16 @@ class _LoginScreenState extends State<LoginScreen> {
           foregroundColor: textColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(25),
-            side: outline ? const BorderSide(color: Colors.white, width: 1.5) : BorderSide.none,
+            side: outline
+                ? const BorderSide(color: Colors.white, width: 1.5)
+                : BorderSide.none,
           ),
           elevation: 0,
         ),
-        child: Text(text, style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        child: Text(text,
+            style: const TextStyle(
+                fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
       ),
     );
   }
-
 }

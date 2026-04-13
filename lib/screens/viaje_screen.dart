@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/auth_service.dart';
 import '../models/destino.dart';
+import '../utils/ui_utils.dart';
 
 class ViajeScreen extends StatefulWidget {
   const ViajeScreen({super.key});
@@ -11,23 +12,28 @@ class ViajeScreen extends StatefulWidget {
 }
 
 class _ViajeScreenState extends State<ViajeScreen> {
-  // CLAVE PARA CONTROLAR EL DRAWER
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  
   final _authService = AuthService();
-  
+
+  // Estado de Ubicación
   bool _origenDetectado = false;
   double? _origenLat, _origenLon;
-  double? _destinoLat, _destinoLon;
-  String _destinoNombre = "Selecciona hacia dónde vas";
-  List<Destino> _destinos = []; 
-  Destino? _destinoSeleccionado;
+
+  // Estado de Destinos y Colonias
+  List<Destino> _destinos = [];
   bool _cargandoDestinos = true;
-  
+
+  // Selección de Colonia (Recogida)
+  String _coloniaTexto = "Selecciona tu barrio/colonia";
+  Destino? _coloniaSeleccionada;
+
+  // Selección de Destino (Hacia dónde va)
+  String _destinoTexto = "Selecciona hacia dónde vas";
+  Destino? _destinoSeleccionado;
+
   final _cantidadController = TextEditingController(text: "1");
   final _referenciaController = TextEditingController();
 
-  // (Se mantienen tus destinos predefinidos y lógica existente...)
   @override
   void initState() {
     super.initState();
@@ -35,148 +41,147 @@ class _ViajeScreenState extends State<ViajeScreen> {
     _cargarDestinos();
   }
 
-  // --- MÉTODOS DE LÓGICA (Sin cambios) ---
+  @override
+  void dispose() {
+    _cantidadController.dispose();
+    _referenciaController.dispose();
+    super.dispose();
+  }
 
   Future<void> _cargarDestinos() async {
     try {
       final lista = await _authService.getDestinos();
-      setState(() {
-        _destinos = lista;
-        _cargandoDestinos = false;
-      });
+      if (mounted) {
+        setState(() {
+          _destinos = lista;
+          _cargandoDestinos = false;
+        });
+      }
     } catch (e) {
-      setState(() => _cargandoDestinos = false);
-      _showSnackBar("Error al cargar destinos", isError: true);
+      if (mounted) setState(() => _cargandoDestinos = false);
+      UIUtils.showError(context, "Error al cargar destinos");
     }
   }
 
   Future<void> _determinarPosicion() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) return;
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
     }
+
     Position position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _origenLat = position.latitude;
-      _origenLon = position.longitude;
-      _origenDetectado = true;
-    });
+    if (mounted) {
+      setState(() {
+        _origenLat = position.latitude;
+        _origenLon = position.longitude;
+        _origenDetectado = true;
+      });
+    }
   }
 
   void _solicitarViaje() async {
-    if (!_origenDetectado || _destinoSeleccionado == null) {
-      _showSnackBar("Selecciona un destino y espera al GPS", isError: true);
+    if (!_origenDetectado ||
+        _destinoSeleccionado == null ||
+        _coloniaSeleccionada == null) {
+      UIUtils.showSnackBar(context, "Completa los datos y espera al GPS",
+          isError: true);
       return;
     }
+
+    // CONCATENACIÓN: Colonia + Referencia manual
+    final referenciaFinal =
+        "Col: ${_coloniaSeleccionada!.nombre}. Ref: ${_referenciaController.text.trim()}";
+
     final datosViaje = {
       "origen_lat": double.parse(_origenLat!.toStringAsFixed(6)),
       "origen_lon": double.parse(_origenLon!.toStringAsFixed(6)),
       "destino_id": _destinoSeleccionado!.id,
       "cantidad_pasajeros": int.tryParse(_cantidadController.text) ?? 1,
-      "referencia": _referenciaController.text.trim(),
+      "referencia": referenciaFinal,
     };
-    _showLoading();
+
+    UIUtils.showLoading(context);
     final exito = await _authService.crearViaje(datosViaje);
-    if (mounted) Navigator.pop(context);
-    if (exito) {
-      Navigator.pushReplacementNamed(context, '/ofertas');
-    } else {
-      _showSnackBar("No se pudo crear el viaje", isError: true);
+
+    if (mounted) {
+      UIUtils.dismissLoading(context);
+      if (exito) {
+        Navigator.pushReplacementNamed(context, '/ofertas');
+      } else {
+        UIUtils.showError(context, "No se pudo crear el viaje");
+      }
     }
   }
 
+  // --- SELECTORES MODALES ---
 
-  void _abrirSeleccionDestino() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        expand: false,
-        builder: (context, scrollController) {
-          if (_cargandoDestinos) return const Center(child: CircularProgressIndicator());
-          return ListView.builder(
-            controller: scrollController,
-            itemCount: _destinos.length,
-            itemBuilder: (context, index) {
-              final destino = _destinos[index];
-              return ListTile(
-                leading: const Icon(Icons.location_on, color: Color(0xFFF7931E)),
-                title: Text(destino.nombre),
-                onTap: () {
-                  setState(() {
-                    _destinoSeleccionado = destino;
-                    _destinoNombre = destino.nombre;
-                    _destinoLat = destino.latitud;
-                    _destinoLon = destino.longitud;
-                  });
-                  Navigator.of(context).pop();
-                },
-              );
-            },
-          );
-        },
-      ),
+  void _abrirSeleccionColonia() {
+    _mostrarPicker(
+      titulo: "Selecciona tu Colonia",
+      onSelect: (destino) {
+        setState(() {
+          _coloniaSeleccionada = destino;
+          _coloniaTexto = destino.nombre;
+        });
+      },
     );
   }
 
-  // --- INTERFAZ ESTILO X ---
+  void _abrirSeleccionDestino() {
+    _mostrarPicker(
+      titulo: "¿A dónde vas?",
+      onSelect: (destino) {
+        setState(() {
+          _destinoSeleccionado = destino;
+          _destinoTexto = destino.nombre;
+        });
+      },
+    );
+  }
 
-  Widget _buildDrawer() {
-    return Drawer(
-      width: MediaQuery.of(context).size.width * 0.80, // 80% de la pantalla
-      child: Column(
-        children: [
-          // Cabecera estilo perfil
-          UserAccountsDrawerHeader(
-            decoration: const BoxDecoration(color: Colors.white),
-            currentAccountPicture: const CircleAvatar(
-              backgroundColor: Color(0xFFF7931E),
-              child: Icon(Icons.person, color: Colors.white, size: 40),
-            ),
-            accountName: const Text("Usuario Kooneex", 
-              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            accountEmail: const Text("Ver perfil", 
-              style: TextStyle(color: Colors.grey)),
-          ),
-          // Opciones
-          ListTile(
-            leading: const Icon(Icons.lock_outline, color: Colors.black87),
-            title: const Text("Cambiar Contraseña"),
-            onTap: () {
-              Navigator.pop(context); // Cerrar drawer
-              // Navegar a tu screen de cambio de contraseña
-              Navigator.pushNamed(context, '/cambiar-password'); 
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.history, color: Colors.black87),
-            title: const Text("Mis Viajes"),
-            onTap: () => Navigator.pop(context),
-          ),
-          const Spacer(),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text("Cerrar Sesión", style: TextStyle(color: Colors.red)),
-            onTap:  () async {
-              await _authService.logout();
-              if (!mounted) return;
-              Navigator.pushNamedAndRemoveUntil(
-                context, 
-                '/login', 
-                (route) => false,
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Sesión cerrada correctamente")),
-              );
-            },
-          ),
-          const SizedBox(height: 20),
-        ],
+  void _mostrarPicker(
+      {required String titulo, required Function(Destino) onSelect}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        expand: false,
+        builder: (context, scrollController) {
+          if (_cargandoDestinos)
+            return const Center(child: CircularProgressIndicator());
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Text(titulo,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 18)),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: _destinos.length,
+                  itemBuilder: (context, index) {
+                    final item = _destinos[index];
+                    return ListTile(
+                      leading: const Icon(Icons.location_on_outlined,
+                          color: Color(0xFFF7931E)),
+                      title: Text(item.nombre),
+                      onTap: () {
+                        onSelect(item);
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -184,8 +189,8 @@ class _ViajeScreenState extends State<ViajeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _scaffoldKey, // ASIGNAR LLAVE
-      drawer: _buildDrawer(), // ASIGNAR DRAWER
+      key: _scaffoldKey,
+      drawer: _buildDrawer(),
       backgroundColor: Colors.white,
       appBar: AppBar(
         elevation: 0,
@@ -193,84 +198,49 @@ class _ViajeScreenState extends State<ViajeScreen> {
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
           child: GestureDetector(
-            onTap: () => _scaffoldKey.currentState?.openDrawer(), // ABRIR MENÚ
+            onTap: () => _scaffoldKey.currentState?.openDrawer(),
             child: const CircleAvatar(
               backgroundColor: Color(0xFFF7931E),
               child: Icon(Icons.person, size: 20, color: Colors.white),
             ),
           ),
         ),
-        title: const Text("Nuevo Viaje", 
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text("Nuevo Viaje",
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Status del GPS
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: _origenDetectado ? Colors.green[50] : Colors.orange[50],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _origenDetectado ? Icons.gps_fixed : Icons.gps_not_fixed,
-                    size: 16,
-                    color: _origenDetectado ? Colors.green : Colors.orange,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    _origenDetectado ? "GPS Listo" : "Localizando...",
-                    style: TextStyle(
-                      color: _origenDetectado ? Colors.green[700] : Colors.orange[700],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+            // Status GPS
+            _buildGPSStatus(),
+            const SizedBox(height: 30),
+
+            // Selector: Colonia de Origen
+            _buildLabel("¿En qué colonia estás?"),
+            _buildSelectorTile(
+              texto: _coloniaTexto,
+              icono: Icons.maps_home_work_outlined,
+              estaSeleccionado: _coloniaSeleccionada != null,
+              onTap: _abrirSeleccionColonia,
+            ),
+            const SizedBox(height: 25),
+
+            // Selector: Destino
+            _buildLabel("¿Hacia dónde vas?"),
+            _buildSelectorTile(
+              texto: _destinoTexto,
+              icono: Icons.location_on_outlined,
+              estaSeleccionado: _destinoSeleccionado != null,
+              onTap: _abrirSeleccionDestino,
             ),
             const SizedBox(height: 30),
 
-            // Tarjeta de Ruta
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: Column(
-                children: [
-                  _buildLocationRow(Icons.radio_button_checked, Colors.blue, "Mi ubicación actual", subtitle: "Origen detectado"),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 11),
-                    child: Align(alignment: Alignment.centerLeft, child: Container(width: 2, height: 20, color: Colors.grey[200])),
-                  ),
-                  _buildLocationRow(
-                    Icons.location_on, 
-                    Colors.red, 
-                    _destinoNombre, 
-                    isAction: true,
-                    onTap: _abrirSeleccionDestino,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            const Text("Detalles del viaje", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            // Detalles
+            _buildLabel("Detalles del viaje"),
             const SizedBox(height: 15),
-
             _buildCustomInput(
               controller: _cantidadController,
               label: "Número de pasajeros",
@@ -278,16 +248,15 @@ class _ViajeScreenState extends State<ViajeScreen> {
               type: TextInputType.number,
             ),
             const SizedBox(height: 20),
-
             _buildCustomInput(
               controller: _referenciaController,
-              label: "Referencia donde sera \nrecogido(Ej: Ciudad, Colonia, portón azul)",
+              label: "Referencia (Ej: Portón azul, frente al parque)",
               icon: Icons.notes,
-              maxLines: 4,
+              maxLines: 3,
             ),
-            
             const SizedBox(height: 40),
 
+            // Botón Principal
             SizedBox(
               width: double.infinity,
               height: 58,
@@ -296,10 +265,15 @@ class _ViajeScreenState extends State<ViajeScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFF7931E),
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                child: const Text("SOLICITAR MOTOTAXI", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                child: const Text("SOLICITAR MOTOTAXI",
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1)),
               ),
             ),
           ],
@@ -308,31 +282,69 @@ class _ViajeScreenState extends State<ViajeScreen> {
     );
   }
 
-  // --- WIDGETS AUXILIARES (Sin cambios) ---
+  // --- WIDGETS DE ESTILO ---
 
-  Widget _buildLocationRow(IconData icon, Color color, String title, {String? subtitle, bool isAction = false, VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(text,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildSelectorTile(
+      {required String texto,
+      required IconData icono,
+      required bool estaSeleccionado,
+      required VoidCallback onTap}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: ListTile(
+        leading: Icon(icono, color: const Color(0xFFF7931E)),
+        title: Text(texto,
+            style: TextStyle(
+                color: estaSeleccionado ? Colors.black : Colors.grey[600],
+                fontSize: 14)),
+        trailing: const Icon(Icons.arrow_drop_down),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Widget _buildGPSStatus() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: _origenDetectado ? Colors.green[50] : Colors.orange[50],
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontSize: 15, fontWeight: isAction ? FontWeight.bold : FontWeight.w500, color: isAction && _destinoLat == null ? Colors.grey : Colors.black)),
-                if (subtitle != null) Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-              ],
-            ),
-          ),
-          if (isAction) const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+          Icon(_origenDetectado ? Icons.gps_fixed : Icons.gps_not_fixed,
+              size: 16, color: _origenDetectado ? Colors.green : Colors.orange),
+          const SizedBox(width: 8),
+          Text(_origenDetectado ? "GPS Listo" : "Localizando...",
+              style: TextStyle(
+                  color:
+                      _origenDetectado ? Colors.green[700] : Colors.orange[700],
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12)),
         ],
       ),
     );
   }
 
-  Widget _buildCustomInput({required TextEditingController controller, required String label, required IconData icon, TextInputType type = TextInputType.text, int maxLines = 1}) {
+  Widget _buildCustomInput(
+      {required TextEditingController controller,
+      required String label,
+      required IconData icon,
+      TextInputType type = TextInputType.text,
+      int maxLines = 1}) {
     return TextField(
       controller: controller,
       keyboardType: type,
@@ -342,29 +354,149 @@ class _ViajeScreenState extends State<ViajeScreen> {
         prefixIcon: Icon(icon, color: const Color(0xFFF7931E)),
         filled: true,
         fillColor: Colors.grey[50],
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFF7931E))),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[200]!)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFF7931E))),
       ),
     );
   }
 
-  void _showSnackBar(String msg, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
+  Widget _buildDrawer() {
+    return Drawer(
+      // Bordes redondeados a la derecha para un look moderno
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
+      ),
+      child: Column(
+        children: [
+          // --- CABECERA PERSONALIZADA CON DEGRADADO ---
+          Container(
+            padding:
+                const EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 30),
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFF7931E), Color(0xFFFFB35C)],
+              ),
+              borderRadius: BorderRadius.only(topRight: Radius.circular(30)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const CircleAvatar(
+                  radius: 35,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, color: Color(0xFFF7931E), size: 40),
+                ),
+                const SizedBox(height: 15),
+                const Text(
+                  "Usuario Kooneex",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  "Cliente verificado",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // --- OPCIONES DEL MENÚ ---
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _buildDrawerItem(
+                    icon: Icons.lock_outline,
+                    title: "Cambiar Contraseña",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/cambiar-password');
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.history,
+                    title: "Mis Viajes",
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.help_outline,
+                    title: "Centro de Ayuda",
+                    onTap: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // --- BOTÓN DE CIERRE DE SESIÓN ---
+          const Divider(indent: 20, endIndent: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              leading:
+                  const Icon(Icons.logout_rounded, color: Colors.redAccent),
+              title: const Text(
+                "Cerrar Sesión",
+                style: TextStyle(
+                    color: Colors.redAccent, fontWeight: FontWeight.w600),
+              ),
+              tileColor: Colors.red.withOpacity(0.05),
+              onTap: () async {
+                UIUtils.showLoading(context);
+                await _authService.logout();
+                if (!mounted) return;
+                UIUtils.dismissLoading(context);
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/login', (route) => false);
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
       ),
     );
   }
 
-  void _showLoading() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFFF7931E)),
+  // Widget auxiliar para mantener el estilo consistente
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Widget? trailing,
+  }) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      leading: Icon(icon, color: Colors.black87),
+      title: Text(
+        title,
+        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
       ),
+      trailing: trailing ??
+          const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+      onTap: onTap,
     );
   }
 }
