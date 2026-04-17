@@ -45,9 +45,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _takePhoto() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 70 // Calidad optimizada para Kooneex
-        );
+      source: ImageSource.camera,
+      imageQuality: 60,
+      maxHeight: 800,
+      maxWidth: 800, // Calidad optimizada para Kooneex
+    );
 
     if (pickedFile != null) {
       setState(() => _imageFile = File(pickedFile.path));

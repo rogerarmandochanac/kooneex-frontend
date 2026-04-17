@@ -55,8 +55,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// Captura de foto optimizada
   Future<void> _takePhoto() async {
     final picker = ImagePicker();
-    final pickedFile =
-        await picker.pickImage(source: ImageSource.camera, imageQuality: 70);
+    final pickedFile = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 60,
+        maxWidth: 800,
+        maxHeight: 800);
 
     if (pickedFile != null) {
       setState(() => _imageFile = File(pickedFile.path));
