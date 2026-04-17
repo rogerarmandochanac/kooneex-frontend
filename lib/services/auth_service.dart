@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/destino.dart';
 import './api_config.dart';
+import '../utils/ui_utils.dart';
+import 'package:flutter/material.dart';
 
 class AuthService {
   // Cambia esta URL por la de tu servidor Django
@@ -553,5 +555,47 @@ class AuthService {
       return json.decode(response.body);
     }
     return null;
+  }
+
+  // Dentro de auth_service.dart
+  Future<void> enviarCalificacionBackend(
+      BuildContext context, // Recibimos el contexto como parámetro
+      int viajeId,
+      double puntuacion,
+      String comentario) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+      if (token == null) {
+        UIUtils.showError(
+            context, "Sesión expirada. Por favor, inicia sesión de nuevo.");
+        return;
+      }
+      // Realizar la petición
+      final response = await http.post(
+        Uri.parse('$_baseUrl/viajes/$viajeId/calificar/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'puntuacion': puntuacion.toInt(),
+          'comentario': comentario,
+        }),
+      );
+
+      // Verificamos si la pantalla sigue activa antes de interactuar con la UI
+      if (!context.mounted) return;
+
+      if (response.statusCode == 201) {
+        UIUtils.showSnackBar(context, "¡Gracias por calificar!");
+      } else {
+        UIUtils.showError(context, "No se pudo guardar la calificación");
+      }
+    } catch (e) {
+      if (context.mounted) {
+        UIUtils.showError(context, "Error de conexión con el servidor");
+      }
+    }
   }
 }

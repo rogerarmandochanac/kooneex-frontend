@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:kooneex/services/api_config.dart';
+import 'package:kooneex/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as latLng;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../services/viaje_socket_service.dart';
+import '../utils/ui_utils.dart';
+import './calificacion_screen.dart';
 
 class ViajeEnCursoPasajeroScreen extends StatefulWidget {
   const ViajeEnCursoPasajeroScreen({super.key});
@@ -69,6 +72,8 @@ class _ViajeEnCursoPasajeroScreenState
 
   void _finalizarFlujoViaje() {
     if (mounted) {
+      _timerRefresco?.cancel();
+      _viajeSocket.desconectar();
       SharedPreferences.getInstance().then((prefs) {
         prefs.remove('current_viaje_id');
       });
@@ -77,7 +82,14 @@ class _ViajeEnCursoPasajeroScreenState
             content: Text("¡Has llegado a tu destino!"),
             backgroundColor: Colors.green),
       );
-      Navigator.pushNamedAndRemoveUntil(context, '/viaje', (route) => false);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CalificacionScreen(viajeId: _viaje!['id']),
+          ),
+        );
+      }
     }
   }
 
@@ -350,6 +362,104 @@ class _ViajeEnCursoPasajeroScreenState
           SizedBox(width: 15),
           Text("ESPERANDO TU LLEGADA AL DESTINO",
               style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+        ],
+      ),
+    );
+  }
+
+  void _mostrarDialogoCalificacion(BuildContext context, int viajeId) {
+    double ratingSeleccionado = 5.0;
+    final TextEditingController comentarioController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible:
+          false, // Obligamos a que califique o use el botón de cerrar
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "¡Has llegado a tu destino!",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("¿Cómo calificarías el servicio del mototaxista?"),
+            const SizedBox(height: 20),
+            // Si no tienes la librería de estrellas, puedes usar iconos simples o un Slider
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (index) {
+                return IconButton(
+                  icon: Icon(
+                    Icons.star,
+                    color: index < ratingSeleccionado
+                        ? const Color(0xFFF7931E)
+                        : Colors.grey[300],
+                    size: 32,
+                  ),
+                  onPressed: () {
+                    // Actualizar el estado del diálogo (necesitarás un StatefulBuilder dentro si quieres que cambien de color)
+                  },
+                );
+              }),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: comentarioController,
+              decoration: InputDecoration(
+                hintText: "Escribe un comentario...",
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              // LIMPIEZA CRÍTICA: Eliminar el ID antes de salir
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('current_viaje_id');
+
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/viaje', (route) => false);
+              }
+            },
+            child: const Text("OMITIR", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF7931E),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              UIUtils.showLoading(context);
+              // Aquí llamas a tu API de Django para guardar la calificación
+              await AuthService().enviarCalificacionBackend(context, viajeId,
+                  ratingSeleccionado, comentarioController.text);
+
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.remove('current_viaje_id');
+
+              if (context.mounted) {
+                UIUtils.dismissLoading(context);
+                // Una vez calificado, regresamos a la pantalla principal
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/viaje', (route) => false);
+              }
+            },
+            child:
+                const Text("CALIFICAR", style: TextStyle(color: Colors.white)),
+          ),
         ],
       ),
     );
