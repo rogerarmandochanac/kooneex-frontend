@@ -259,6 +259,14 @@ class _SolicitudesScreenState extends State<SolicitudesScreen>
                 padding: EdgeInsets.zero,
                 children: [
                   _buildDrawerItem(
+                    icon: Icons.edit_note_rounded,
+                    title: "Editar mi Perfil",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/editar-perfil');
+                    },
+                  ),
+                  _buildDrawerItem(
                     icon: Icons.lock_outline,
                     title: "Cambiar Contraseña",
                     onTap: () {
