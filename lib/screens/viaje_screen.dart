@@ -424,7 +424,7 @@ class _ViajeScreenState extends State<ViajeScreen> {
                 Text(
                   "Cliente verificado",
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: .8),
                     fontSize: 14,
                   ),
                 ),
@@ -441,6 +441,16 @@ class _ViajeScreenState extends State<ViajeScreen> {
               child: ListView(
                 padding: EdgeInsets.zero,
                 children: [
+                  // En el ListView del Drawer en viaje_screen.dart
+                  _buildDrawerItem(
+                    icon: Icons.edit_note_rounded,
+                    title: "Editar mi Perfil",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/editar-perfil');
+                    },
+                  ),
+
                   _buildDrawerItem(
                     icon: Icons.lock_outline,
                     title: "Cambiar Contraseña",

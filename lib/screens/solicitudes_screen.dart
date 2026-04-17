@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:kooneex/screens/ayuda_screen.dart';
 import '../services/auth_service.dart';
 import '../services/mototaxi_socket_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/push_notification_service.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../utils/ui_utils.dart';
+import 'historial_viaje_screen.dart';
 
 class SolicitudesScreen extends StatefulWidget {
   const SolicitudesScreen({super.key});
@@ -136,9 +138,15 @@ class _SolicitudesScreenState extends State<SolicitudesScreen>
         elevation: 0,
         backgroundColor: Colors.white,
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () => _scaffoldKey.currentState?.openDrawer(),
+            child: const CircleAvatar(
+              backgroundColor: Color(0xFFF7931E),
+              child: Icon(Icons.person, size: 20, color: Colors.white),
+            ),
+          ),
         ),
         title: const Text("Viajes Solicitados",
             style: TextStyle(
@@ -233,7 +241,7 @@ class _SolicitudesScreenState extends State<SolicitudesScreen>
                 Text(
                   "ID: #MOT-042", // Un detalle "pro" simulando un ID de empleado
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: .8),
                     fontSize: 14,
                   ),
                 ),
@@ -260,17 +268,26 @@ class _SolicitudesScreenState extends State<SolicitudesScreen>
                   ),
                   _buildDrawerItem(
                     icon: Icons.history,
-                    title: "Mis Servicios",
-                    onTap: () => Navigator.pop(context),
+                    title: "Mis Viajes",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const HistorialScreen(esMototaxista: true)));
+                    },
                   ),
                   _buildDrawerItem(
-                    icon: Icons.star_border,
-                    title: "Mi Calificación",
-                    trailing: const Text("4.9",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFF7931E))),
-                    onTap: () => Navigator.pop(context),
+                    icon: Icons.help_outline,
+                    title: "Centro de Ayuda",
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const AyudaScreen()));
+                    },
                   ),
                 ],
               ),

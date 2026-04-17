@@ -494,4 +494,64 @@ class AuthService {
       return [];
     }
   }
+
+  // En auth_service.dart
+
+  Future<Map<String, dynamic>> actualizarPerfil({
+    String? username,
+    String? firstName,
+    String? lastName,
+    String? email,
+    String? telefono,
+    File? foto,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token');
+
+      var request = http.MultipartRequest('PATCH',
+          Uri.parse('$_baseUrl/usuarios/perfil/')); // Tu endpoint de perfil
+
+      request.headers['Authorization'] = 'Bearer $token';
+
+      if (username != null) request.fields['username'] = username;
+      if (firstName != null) request.fields['first_name'] = firstName;
+      if (lastName != null) request.fields['last_name'] = lastName;
+      if (email != null) request.fields['email'] = email;
+      if (telefono != null) request.fields['telefono'] = telefono;
+
+      if (foto != null) {
+        request.files.add(await http.MultipartFile.fromPath('foto', foto.path));
+      }
+
+      var streamedResponse =
+          await request.send().timeout(const Duration(seconds: 20));
+      var response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        return {'success': true};
+      } else {
+        return {'success': false, 'message': 'Error al actualizar perfil'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Error de conexión'};
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPerfil() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    final response = await http.get(
+      Uri.parse('$_baseUrl/usuarios/perfil/'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    }
+    return null;
+  }
 }

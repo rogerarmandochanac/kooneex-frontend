@@ -18,6 +18,7 @@ import 'services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'services/auth_service.dart';
 import 'services/actualizaciones.dart';
+import 'screens/editar_perfil_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -126,6 +127,7 @@ class KooneexApp extends StatelessWidget {
         '/viaje_en_curso_pasajero': (context) =>
             const ViajeEnCursoPasajeroScreen(),
         '/cambiar-password': (context) => const CambiarPasswordScreen(),
+        '/editar-perfil': (context) => const EditProfileScreen(),
       },
     );
   }

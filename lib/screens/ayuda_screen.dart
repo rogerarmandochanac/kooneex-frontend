@@ -62,6 +62,10 @@ class AyudaScreen extends StatelessWidget {
                 "Revisa la ubicación y destino. Envía tu oferta (puedes ajustarla si es necesario) y espera la aceptación del cliente. Al terminar el recorrido, usa el botón verde para finalizar."),
             _buildPregunta("Requisitos para ser conductor",
                 "Por el momento, solo necesitas ser mayor de edad para empezar a ofrecer tus servicios."),
+            _buildPregunta("Tiene costo el uso de la app",
+                "La aplicacion tiene un costo de \$1 por cada viaje el cual es el que se cobra al que solicita el servicio."),
+            _buildPregunta("Como pago el uso de la aplicacion",
+                "Tienes que pasar el efectivo al contacto puesto al final de esta seccion cada 50 viajes si no la app se bloquea."),
 
             const SizedBox(height: 40),
 
@@ -69,10 +73,10 @@ class AyudaScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFF7931E).withOpacity(0.1),
+                color: const Color(0xFFF7931E).withValues(alpha: .1),
                 borderRadius: BorderRadius.circular(20),
-                border:
-                    Border.all(color: const Color(0xFFF7931E).withOpacity(0.3)),
+                border: Border.all(
+                    color: const Color(0xFFF7931E).withValues(alpha: .3)),
               ),
               child: Column(
                 children: [
@@ -134,7 +138,7 @@ class AyudaScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: .2)),
       ),
       child: ExpansionTile(
         shape: const Border(), // Quita la línea divisoria por defecto

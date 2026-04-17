@@ -131,29 +131,6 @@ class _OfertasScreenState extends State<OfertasScreen> {
                   itemBuilder: (context, index) =>
                       _buildOfertaItem(_ofertas[index]),
                 ),
-      // Botón de cancelar viaje más elegante
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: _ofertas.isNotEmpty
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: TextButton.icon(
-                onPressed: _confirmarCancelacion,
-                icon:
-                    const Icon(Icons.close, color: Colors.redAccent, size: 20),
-                label: const Text("CANCELAR SOLICITUD",
-                    style: TextStyle(
-                        color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                style: TextButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
-                ),
-              ),
-            )
-          : null,
     );
   }
 
@@ -217,7 +194,7 @@ class _OfertasScreenState extends State<OfertasScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: .04),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
