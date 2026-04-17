@@ -388,7 +388,7 @@ class _SolicitudItemState extends State<SolicitudItem> {
                   radius: 28,
                   backgroundColor: Colors.grey[100],
                   backgroundImage:
-                      NetworkImage(formatImageUrl(viaje['pasajero_foto'])),
+                      NetworkImage(formatImageUrl(viaje['pasajero__foto'])),
                 ),
                 const SizedBox(width: 15),
                 Expanded(

@@ -242,7 +242,7 @@ class _OfertasScreenState extends State<OfertasScreen> {
                     radius: 30,
                     backgroundColor: Colors.grey[200],
                     backgroundImage: NetworkImage(
-                        formatImageUrl(oferta['mototaxista_foto']) ??
+                        formatImageUrl(oferta['mototaxista__foto']) ??
                             'https://via.placeholder.com/150'),
                   ),
                 ),
