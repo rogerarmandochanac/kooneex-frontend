@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import './api_config.dart';
 
 class OfflineService {
   static Database? _db;
@@ -39,12 +40,16 @@ class OfflineService {
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
-    
+
     for (var p in pendientes) {
       try {
         final response = await http.post(
-          Uri.parse('http://3.21.34.42:8000/api/usuarios/actualizar_ubicacion/'),
-          headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+          Uri.parse(
+              'http://${ApiConfig.currentIp}/api/usuarios/actualizar_ubicacion/'),
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json'
+          },
           body: jsonEncode({'lat': p['lat'], 'lon': p['lon']}),
         );
 

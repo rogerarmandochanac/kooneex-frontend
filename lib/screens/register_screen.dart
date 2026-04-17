@@ -28,6 +28,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
   File? _imageFile;
   bool _isObscure = true;
 
+  // Estado para comunidades
+  List<dynamic> _comunidades = [];
+  String? _selectedComunidadId; // Almacenará el ID seleccionado
+  bool _cargandoComunidades = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarComunidades();
+  }
+
+  Future<void> _cargarComunidades() async {
+    try {
+      // Necesitarás crear este método en AuthService o usar uno existente
+      final lista = await _authService.getComunidadesPublicas();
+      setState(() {
+        _comunidades = lista;
+        _cargandoComunidades = false;
+      });
+    } catch (e) {
+      setState(() => _cargandoComunidades = false);
+    }
+  }
+
   /// Captura de foto optimizada
   Future<void> _takePhoto() async {
     final picker = ImagePicker();
@@ -57,6 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       telefono: _phoneController.text.trim(),
       rol: _selectedRol,
       foto: _imageFile!,
+      comunidad: _selectedComunidadId!,
     );
 
     if (mounted) Navigator.pop(context); // Cierra el loading
@@ -132,7 +157,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
               const SizedBox(height: 25),
 
               // Inputs de Texto
-              _buildField(_userController, "Usuario", Icons.account_circle),
+              _buildField(
+                  _userController, "Nombre de usuario", Icons.account_circle),
+              const Padding(
+                padding: EdgeInsets.only(top: 2, left: 8, bottom: 10),
+                child: Text(
+                  "Escribe tu usuario sin espacios (Ej: juanperez)",
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
               _buildField(_nameController, "Nombre", Icons.person),
               _buildField(
                   _lastNameController, "Apellido", Icons.person_outline),
@@ -140,6 +177,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   type: TextInputType.emailAddress),
               _buildField(_phoneController, "Teléfono", Icons.phone,
                   type: TextInputType.phone),
+
+              const SizedBox(height: 10),
+              const Text("¿En qué comunidad te encuentras?",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 15),
+
+              DropdownButtonFormField<String>(
+                initialValue: _selectedComunidadId,
+                decoration: InputDecoration(
+                  labelText: "Selecciona tu comunidad",
+                  prefixIcon:
+                      const Icon(Icons.location_city, color: Color(0xFFF7931E)),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                ),
+                items: _comunidades.map((com) {
+                  return DropdownMenuItem<String>(
+                    value: com['id'].toString(),
+                    child: Text(com['nombre']),
+                  );
+                }).toList(),
+                onChanged: (value) =>
+                    setState(() => _selectedComunidadId = value),
+                // VALIDACIÓN: Evita que el valor sea nulo o blanco
+                validator: (value) => (value == null || value.isEmpty)
+                    ? "Debes seleccionar una comunidad"
+                    : null,
+              ),
+              const SizedBox(height: 25),
 
               // Campo Contraseña
               _buildField(

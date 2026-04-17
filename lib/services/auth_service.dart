@@ -4,10 +4,11 @@ import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/destino.dart';
+import './api_config.dart';
 
 class AuthService {
   // Cambia esta URL por la de tu servidor Django
-  final String _baseUrl = "http://3.21.34.42/api";
+  final String _baseUrl = "http://${ApiConfig.currentIp}/api";
 
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
@@ -72,6 +73,7 @@ class AuthService {
     required String telefono,
     required String rol,
     required File foto,
+    required String comunidad,
   }) async {
     try {
       var request = http.MultipartRequest(
@@ -85,6 +87,7 @@ class AuthService {
         'last_name': lastName,
         'telefono': telefono,
         'rol': rol,
+        'comunidad': comunidad,
       });
 
       // Adjuntamos la foto
@@ -439,5 +442,56 @@ class AuthService {
       }),
     );
     return response.statusCode == 200;
+  }
+
+  // En tu método de historial de viajes
+  Future<List<dynamic>> getHistorialViajes() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs
+          .getString('access_token'); // El mismo que usas en cambiar-password
+
+      if (token == null) return [];
+
+      final response = await http.get(
+        Uri.parse('http://${ApiConfig.currentIp}/api/viajes/historial/'),
+        headers: await getAuthHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+    } catch (e) {
+      return [];
+    }
+    return [];
+  }
+
+  // En auth_service.dart
+  Future<Map<String, String>> getAuthHeaders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
+  Future<List<dynamic>> getComunidadesPublicas() async {
+    try {
+      // Usamos un endpoint público que no requiera Token
+      final response = await http.get(
+        Uri.parse('$_baseUrl/comunidades/'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
   }
 }

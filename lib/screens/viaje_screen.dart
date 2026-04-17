@@ -3,6 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import '../services/auth_service.dart';
 import '../models/destino.dart';
 import '../utils/ui_utils.dart';
+import 'package:kooneex/screens/historial_viaje_screen.dart';
+import 'package:kooneex/screens/ayuda_screen.dart';
 
 class ViajeScreen extends StatefulWidget {
   const ViajeScreen({super.key});
@@ -103,6 +105,9 @@ class _ViajeScreenState extends State<ViajeScreen> {
 
     UIUtils.showLoading(context);
     final exito = await _authService.crearViaje(datosViaje);
+    await _authService.actualizarUbicacion(
+        double.parse(_origenLat!.toStringAsFixed(6)),
+        double.parse(_origenLon!.toStringAsFixed(6)));
 
     if (mounted) {
       UIUtils.dismissLoading(context);
@@ -250,9 +255,20 @@ class _ViajeScreenState extends State<ViajeScreen> {
             const SizedBox(height: 20),
             _buildCustomInput(
               controller: _referenciaController,
-              label: "Referencia (Ej: Portón azul, frente al parque)",
+              label: "Referencia donde estas.",
               icon: Icons.notes,
               maxLines: 3,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0, left: 4.0, right: 4.0),
+              child: Text(
+                "Indica el color de tu casa, nombre de un negocio o punto exacto donde el mototaxista debe recogerte. Esto ayuda a evitar retrasos.",
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
             const SizedBox(height: 40),
 
@@ -436,12 +452,25 @@ class _ViajeScreenState extends State<ViajeScreen> {
                   _buildDrawerItem(
                     icon: Icons.history,
                     title: "Mis Viajes",
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  const HistorialScreen(esMototaxista: false)));
+                    },
                   ),
                   _buildDrawerItem(
                     icon: Icons.help_outline,
                     title: "Centro de Ayuda",
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const AyudaScreen()));
+                    },
                   ),
                 ],
               ),

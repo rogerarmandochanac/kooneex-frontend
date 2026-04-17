@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart' as latLng;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
 import 'package:geolocator/geolocator.dart';
+import '../services/api_config.dart';
 
 import '../services/location_service.dart';
 import '../services/offline_service.dart';
@@ -27,7 +28,7 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
   Timer? _timerRefresco;
 
   final MapController _mapController = MapController();
-  final String _baseUrl = "http://3.21.34.42:8000/api";
+  final String _baseUrl = "http://${ApiConfig.currentIp}/api";
 
   Map<String, dynamic>? _viaje;
   List<latLng.LatLng> _puntosRuta = [];
@@ -154,7 +155,7 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
     if (!_estaOnline || _viaje == null) return;
 
     double pLat =
-        double.tryParse(_viaje!['origen_lan']?.toString() ?? "") ?? 0.0;
+        double.tryParse(_viaje!['origen_lat']?.toString() ?? "") ?? 0.0;
     double pLon =
         double.tryParse(_viaje!['origen_lon']?.toString() ?? "") ?? 0.0;
 
@@ -238,7 +239,7 @@ class _ViajeEnCursoScreenState extends State<ViajeEnCursoScreen> {
     double cLon =
         double.tryParse(_viaje!['conductor_lon']?.toString() ?? "0") ?? 0;
     double pLat =
-        double.tryParse(_viaje!['origen_lan']?.toString() ?? "0") ?? 0;
+        double.tryParse(_viaje!['origen_lat']?.toString() ?? "0") ?? 0;
     double pLon =
         double.tryParse(_viaje!['origen_lon']?.toString() ?? "0") ?? 0;
 

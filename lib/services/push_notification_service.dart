@@ -2,6 +2,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import './api_config.dart';
 
 class PushNotificationService {
   static FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -31,7 +32,7 @@ class PushNotificationService {
 
     // Tu endpoint en Django para guardar el token del mototaxista
     await http.post(
-      Uri.parse('http://3.21.34.42/api/usuarios/guardar_token/'),
+      Uri.parse('http://${ApiConfig.currentIp}/api/usuarios/guardar_token/'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $authToken',

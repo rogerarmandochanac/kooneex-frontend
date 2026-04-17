@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import './api_config.dart';
 
 class LocationService {
   // 1. Implementación de Singleton
@@ -11,12 +12,12 @@ class LocationService {
   factory LocationService() => _instance;
   LocationService._internal();
 
-  final String _baseUrl = "http://3.21.34.42:8000/api";
+  final String _baseUrl = "http://${ApiConfig.currentIp}/api";
   StreamSubscription<Position>? _positionStreamSubscription;
 
   // NUEVO: Controlador para notificar a la UI sobre cambios de posición
   final _posicionController = StreamController<Position>.broadcast();
-  
+
   // NUEVO: Stream público que escucharemos en la pantalla del mapa
   Stream<Position> get posicionStream => _posicionController.stream;
 
@@ -80,7 +81,8 @@ class LocationService {
     // Actualización inicial
     Geolocator.getCurrentPosition().then((position) {
       enviarUbicacionAlServidor(position.latitude, position.longitude);
-      _posicionController.add(position); // Notificar a la UI la posición inicial
+      _posicionController
+          .add(position); // Notificar a la UI la posición inicial
     }).catchError((e) => debugPrint("Error al obtener posición inicial: $e"));
 
     // Configuración del rastro constante
@@ -95,9 +97,9 @@ class LocationService {
       (Position position) {
         // ACCIÓN 1: Sincronizar con el backend
         enviarUbicacionAlServidor(position.latitude, position.longitude);
-        
+
         // ACCIÓN 2: Enviar al Stream para que el mapa se mueva en tiempo real
-        _posicionController.add(position); 
+        _posicionController.add(position);
       },
       onError: (error) {
         debugPrint("❌ Error en el stream de ubicación: $error");

@@ -1,28 +1,31 @@
 import 'dart:async';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import './api_config.dart';
 
 class MototaxiSocketService {
   // Singleton para usar la misma instancia en toda la app
-  static final MototaxiSocketService _instance = MototaxiSocketService._internal();
+  static final MototaxiSocketService _instance =
+      MototaxiSocketService._internal();
   factory MototaxiSocketService() => _instance;
   MototaxiSocketService._internal();
 
   WebSocketChannel? _channel;
-  final String _url = "ws://3.21.34.42:8000/ws/mototaxi/";
-  
+  final String _url = "ws://${ApiConfig.currentIp}/ws/mototaxi/";
+
   // Este controlador enviará los mensajes a la UI
-  final StreamController<dynamic> _controller = StreamController<dynamic>.broadcast();
+  final StreamController<dynamic> _controller =
+      StreamController<dynamic>.broadcast();
   bool _intentandoReconectar = false;
 
   Stream<dynamic> get stream => _controller.stream;
 
   void conectar() {
     if (_intentandoReconectar) return;
-    
+
     print("🔌 Conectando mototaxi al canal global...");
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_url));
-      
+
       _channel!.stream.listen(
         (data) {
           _controller.add(data); // Enviamos el mensaje al stream principal

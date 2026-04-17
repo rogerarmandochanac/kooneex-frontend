@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import './api_config.dart';
 
 class ViajeSocketService {
   WebSocketChannel? _channel;
@@ -8,11 +9,11 @@ class ViajeSocketService {
   int _reintentos = 2; // Segundos para el primer reintento
 
   // Quitamos el puerto :8000 para que pase por Nginx (puerto 80)
-  final String _wsBaseUrl = "ws://3.21.34.42:8000/ws/viaje";
+  final String _wsBaseUrl = "ws://${ApiConfig.currentIp}/ws/viaje";
 
   Stream<dynamic> conectar(int viajeId) {
     if (_estaConectado) return _controller.stream;
-    
+
     _intentarConexion(viajeId);
     return _controller.stream;
   }
@@ -41,7 +42,7 @@ class ViajeSocketService {
   void _manejarDesconexion(int viajeId) {
     _estaConectado = false;
     print("❌ Conexión perdida. Reintentando en $_reintentos segundos...");
-    
+
     Timer(Duration(seconds: _reintentos), () {
       if (_reintentos < 30) _reintentos *= 2; // Incremento exponencial
       _intentarConexion(viajeId);
