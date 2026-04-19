@@ -218,9 +218,8 @@ class _OfertasScreenState extends State<OfertasScreen> {
                   child: CircleAvatar(
                     radius: 30,
                     backgroundColor: Colors.grey[200],
-                    backgroundImage: NetworkImage(
-                        formatImageUrl(oferta['mototaxista__foto']) ??
-                            'https://via.placeholder.com/150'),
+                    backgroundImage: NetworkImage(oferta['mototaxista_foto'] ??
+                        'https://via.placeholder.com/150'),
                   ),
                 ),
                 const SizedBox(width: 15),

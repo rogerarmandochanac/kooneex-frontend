@@ -412,8 +412,8 @@ class _SolicitudItemState extends State<SolicitudItem> {
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: Colors.grey[100],
-                  backgroundImage:
-                      NetworkImage(formatImageUrl(viaje['pasajero__foto'])),
+                  backgroundImage: NetworkImage(viaje['pasajero_foto'] ??
+                      'https://via.placeholder.com/150'),
                 ),
                 const SizedBox(width: 15),
                 Expanded(
