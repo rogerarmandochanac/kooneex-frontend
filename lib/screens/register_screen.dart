@@ -82,7 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       firstName: _nameController.text.trim(),
       lastName: _lastNameController.text.trim(),
       telefono: _phoneController.text.trim(),
-      rol: _selectedRol,
+      rol: "pasajero",
       foto: _imageFile!,
       comunidad: _selectedComunidadId!,
     );
@@ -129,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Registro",
+        title: const Text("Registro pasajero",
             style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.white,
@@ -237,23 +237,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 },
               ),
 
-              const SizedBox(height: 15),
-              const Text("¿Cuál será tu rol?",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 15),
+              // const SizedBox(height: 15),
+              // const Text("¿Cuál será tu rol?",
+              //     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              // const SizedBox(height: 15),
 
-              // Selector de Rol Mejorado (Tarjetas visuales)
-              Row(
-                children: [
-                  Expanded(
-                      child: _roleCard('pasajero', 'Soy Pasajero',
-                          Icons.directions_walk, brandColor)),
-                  const SizedBox(width: 15),
-                  Expanded(
-                      child: _roleCard('mototaxista', 'Soy Conductor',
-                          Icons.motorcycle, brandColor)),
-                ],
-              ),
+              // // Selector de Rol Mejorado (Tarjetas visuales)
+              // Row(
+              //   children: [
+              //     Expanded(
+              //         child: _roleCard('pasajero', 'Soy Pasajero',
+              //             Icons.directions_walk, brandColor)),
+              //     const SizedBox(width: 15),
+              //     Expanded(
+              //         child: _roleCard('mototaxista', 'Soy Conductor',
+              //             Icons.motorcycle, brandColor)),
+              //   ],
+              // ),
 
               const SizedBox(height: 35),
 
@@ -294,7 +294,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                      color: activeColor.withOpacity(0.3),
+                      color: activeColor.withValues(alpha: .3),
                       blurRadius: 8,
                       offset: const Offset(0, 4))
                 ]

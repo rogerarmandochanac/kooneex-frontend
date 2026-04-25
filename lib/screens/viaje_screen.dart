@@ -206,7 +206,7 @@ class _ViajeScreenState extends State<ViajeScreen> {
             onTap: () => _scaffoldKey.currentState?.openDrawer(),
             child: const CircleAvatar(
               backgroundColor: Color(0xFFF7931E),
-              child: Icon(Icons.person, size: 20, color: Colors.white),
+              child: Icon(Icons.settings, size: 25, color: Colors.white),
             ),
           ),
         ),
